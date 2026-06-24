@@ -35,7 +35,7 @@
           $scope.dataProvider = this.afForm;
           this.fieldName = this.defn.name;
         } else {
-          // Locate this field's data source by walking up to the nearest fieldset/join/repeat-item controller — the entity/model instance it reads from and writes to.
+          // Locate this field's data source by walking up to the nearest fieldset/join/repeat-item controller - the entity/model instance it reads from and writes to.
           const closestController = $($element).closest('[af-fieldset],[af-join],[af-repeat-item]');
           $scope.dataProvider = closestController.is('[af-repeat-item]') ? this.afRepeatItem : this.afJoin || this.afFieldset;
         }

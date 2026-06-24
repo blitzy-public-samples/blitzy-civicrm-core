@@ -22,7 +22,7 @@
           $scope.element = $el;
         },
         controller: function($scope) {
-          // Pad the entity controller's backing data array up to `min`, pushing the correct empty shape per repeat type — guarantees at least `min` rendered items.
+          // Pad the entity controller's backing data array up to `min`, pushing the correct empty shape per repeat type - guarantees at least `min` rendered items.
           this.getItems = $scope.getItems = function() {
             const data = getEntityController().getData();
             while ($scope.min && data.length < $scope.min) {
