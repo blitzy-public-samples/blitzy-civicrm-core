@@ -28,6 +28,7 @@
       $scope.searchDisplayListFilter = {};
       this.meta = afGui.meta;
       const editor = this;
+      // Undo/redo time-travel state: deep-cloned form-model snapshots (history/position/action guard/last-saved); sortableOptions caches the shared jQuery-UI ui-sortable drag config per entity.
       let undoHistory = [];
       let undoPosition = 0;
       let undoAction = null;
@@ -55,6 +56,7 @@
 
       this.$onInit = function() {
         // Load the current form plus blocks & fields
+        // Pipeline order: resetMeta() clears prior metadata, addMeta(this.data) ingests the server-provided form definition/metadata, then initializeForm() builds the editable $scope model.
         afGui.resetMeta();
         afGui.addMeta(this.data);
         initializeForm();
@@ -689,6 +691,7 @@
       };
 
       // Validates that a drag-n-drop action is allowed
+      // angular-ui-sortable binds to the layout '#children' arrays (ng-model in the .html templates) and mutates them on drop; onDrop here only vetoes invalid drops via sort.cancel().
       this.onDrop = function(event, ui) {
         const sort = ui.item.sortable;
         // Check if this is a callback for an item dropped into a different container

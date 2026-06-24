@@ -102,6 +102,8 @@
       }
 
       // This gets called from jquery-ui so we have to manually apply changes to scope
+      // jQuery-UI sortable callbacks run outside the digest; $timeout + $scope.$apply re-enter it to flush the rebuilt palette to the view.
+      // React-migration hotspot: a React port would update palette state directly with no manual digest re-entry.
       $scope.buildPaletteLists = () => {
         $timeout(() => {
           $scope.$apply(() => {

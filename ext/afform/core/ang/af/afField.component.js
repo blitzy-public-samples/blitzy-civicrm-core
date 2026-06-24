@@ -11,6 +11,7 @@
     templateUrl: '~/af/afField.html',
     bindings: {
       fieldName: '@name',
+      // `defn` is the field-definition object (two-way bound); it drives WHICH control renders for this <af-field>.
       defn: '='
     },
     controller: function($scope, $element, crmApi4, $timeout) {
@@ -30,9 +31,11 @@
         // "extra" fields initially have no fieldName
         if (!this.fieldName) {
           isExtra = true;
+          // With no entity of its own, an extra field binds its data provider directly to the form controller.
           $scope.dataProvider = this.afForm;
           this.fieldName = this.defn.name;
         } else {
+          // Locate this field's data source by walking up to the nearest fieldset/join/repeat-item controller — the entity/model instance it reads from and writes to.
           const closestController = $($element).closest('[af-fieldset],[af-join],[af-repeat-item]');
           $scope.dataProvider = closestController.is('[af-repeat-item]') ? this.afRepeatItem : this.afJoin || this.afFieldset;
         }
@@ -121,6 +124,7 @@
                 joinEntity: ctrl.afJoin ? ctrl.afJoin.entity : null,
                 values: $scope.dataProvider.getFieldData()
               };
+              // Resolve chain-select / dynamic option lists from the server at runtime, using the current dataProvider field values.
               crmApi4('Afform', 'getOptions', params)
                 .then((data) => {
                   $('input[crm-ui-select]', $element).removeClass('loading').prop('disabled', !data.length);

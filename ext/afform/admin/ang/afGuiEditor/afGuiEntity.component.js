@@ -41,6 +41,7 @@
        * The UI always deals with IDs;
        * this function translates to and from suffixed values,
        * if the suffixed name is being used in the data object
+       * Hides option-suffix handling (:name/:label vs raw ID) so ng-model binds a stable value; a React port would model this as an explicit value/label transform.
        * @todo switch to using :name suffixes throughout where
        * available
        */

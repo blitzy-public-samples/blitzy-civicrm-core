@@ -7,6 +7,9 @@
 
       // Parse strings of javascript that php couldn't interpret
       // TODO: Figure out which attributes actually need to be evaluated, as a whitelist would be less error-prone than a blacklist
+      // afGui ingests PHP-produced form metadata in which some attribute strings are JS expressions PHP could not evaluate;
+      // evaluate() runs them client-side via Angular's $parse. A blacklist (doNotEval) is used here rather than the safer whitelist noted above.
+      // Migration note: this runtime evaluation of strings into values is the piece a React port must replace with explicit typed parsing.
       const doNotEval = ['filters'];
 
       function evaluate(collection) {
@@ -27,6 +30,7 @@
         });
       }
 
+      // Heuristic gate deciding which strings are worth evaluating: object/array literals, or a ts() translation call.
       function looksLikeJs(str) {
         str = _.trim(str);
         let firstChar = str.charAt(0);
@@ -316,6 +320,7 @@
 
         // Recursively searches a collection and its children using _.filter
         // Returns an array of all matches, or an object if the indexBy param is used
+        // Walks the #tag/#children markup-to-model tree that mirrors the .aff.html structure.
         findRecursive: function findRecursive(collection, predicate, indexBy) {
           const items = _.filter(collection, predicate);
           _.each(collection, function(item) {
@@ -332,6 +337,7 @@
         // Recursively searches part of a form and returns all elements matching predicate
         // Will recurse into block elements
         // Will stop recursing when it encounters an element matching 'exclude'
+        // Traverses the same #tag/#children tree and also descends into reusable block layouts (CRM.afGuiEditor.blocks[...].layout).
         getFormElements: function getFormElements(collection, predicate, exclude) {
           let childMatches = [];
           let items = _.filter(collection, predicate);
@@ -354,6 +360,7 @@
         },
 
         // Applies _.remove() to an item and its children
+        // Prunes nodes from the #tag/#children markup-to-model tree in place.
         removeRecursive: function removeRecursive(collection, removeParams) {
           _.remove(collection, removeParams);
           _.each(collection, function(item) {
@@ -459,6 +466,8 @@
       $('#af-gui-icon-picker').crmIconPicker();
     });
     // Add css classes while dragging
+    // Cross-cutting drag-visual state managed OUTSIDE Angular via document-level jQuery-UI (ui-sortable) events that mutate DOM classes directly, bypassing the Angular digest.
+    // Migration note: a React DnD library (e.g. dnd-kit/react-dnd) would hold this drag state in component state instead of global jQuery handlers.
     $(document)
       // When dragging an item over a container, add a class to highlight the target
       .on('sortover', function(e) {
@@ -484,6 +493,7 @@
   // Connect bootstrap dropdown.js with angular
   // Allows menu content to be conditionally rendered only if open
   // This gives a large performance boost for a page with lots of menus
+  // Migration note: another DOM-event-to-$scope.$apply interop seam (Bootstrap dropdown events) a React port must replace.
   angular.module('afGuiEditor').directive('afGuiMenu', function() {
     return {
       restrict: 'A',

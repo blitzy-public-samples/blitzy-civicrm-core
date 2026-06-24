@@ -14,6 +14,8 @@
         ts = CRM.ts('org.civicrm.afform');
 
       const saveDraftButtons = [];
+      // In-memory form model: `schema` holds each entity's field definitions; `data` holds the collected field values.
+      // These two objects ARE the model that the child af-* directives and templates read from and write to via $scope.
       const schema = {};
       const data = {
         extra: {fields: {}},
@@ -30,6 +32,7 @@
 
       this.$onInit = () => {
         // This component has no template. It makes its controller available within it by adding it to the parent scope.
+        // Exposing it by name (this.ctrl) is how child directives/templates reach this form controller through $scope.
         $scope.$parent[this.ctrl] = this;
 
         $timeout(() => {
@@ -47,6 +50,7 @@
         });
       };
 
+      // Give each declared <af-entity> its own model slot: a schema entry plus an empty data array for its collected values.
       this.registerEntity = function registerEntity(entity) {
         schema[entity.modelName] = entity;
         data[entity.modelName] = [];
@@ -109,6 +113,7 @@
           if (params.fillMode === 'form') {
             $element.block();
           }
+          // Fetch the form definition + entity values from the server and merge them onto the in-memory `data` model bound to $scope.
           return crmApi4('Afform', 'prefill', params)
             .then((result) => {
               result.forEach((item) => {
@@ -463,6 +468,7 @@
           cancelDraftWatcher();
         }
 
+        // Post the collected $scope model (values: data) back to the server through APIv4 to validate and save the entities.
         const submitApi = crmApi4('Afform', 'submit', {
           name: ctrl.getFormMeta().name,
           args: args,
