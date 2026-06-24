@@ -145,12 +145,13 @@ Because the editor sits on top of the core runtime and SearchKit, and all three 
 
 ## Known Limitations
 
-- The editor is built on **AngularJS 1.8.2**, which has been **end-of-life since January 2022** with no further upstream releases expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2`
+- The editor is built on **AngularJS 1.8.2**, which has been **end-of-life since January 2022** with no further upstream releases expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2` For a quantified analysis of this editor's AngularJS surface and the phased plan to migrate it to React, see [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md).
 - The drag-and-drop relies on **`angular-ui-sortable` 0.19.0**, an unmaintained AngularJS-era wrapper over jQuery-UI's sortable. `Source: composer.json:L167-L168` The editor's drag handlers build on it. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`
 - The `afGui` service performs **runtime string evaluation** of markup attributes via `$parse` (gated by the `doNotEval` allow-list), which has no direct equivalent outside AngularJS. `Source: ext/afform/admin/ang/afGuiEditor.js:L13-L31`
 
 ## Developer Documentation
 
+- [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md) — quantified analysis of the AngularJS editor surface and the phased React migration assessment.
 - [Form Core (afform) runtime](../core/README.md) — the sibling runtime that renders and processes the forms this editor builds.
 - [FormBuilder (afform) overview](../README.md) — the parent extension overview.
 - [Full AngularJS Integration](../docs/angular.md) — integrating between Afform and vanilla AngularJS.

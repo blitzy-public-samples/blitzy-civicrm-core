@@ -185,10 +185,11 @@ The form-level `afForm` component has no template of its own; on init it makes i
 ## Known Limitations
 
 - The entire `af` / `afCore` tier is built on AngularJS — every module is registered through `angular.module(...)`. `Source: ext/afform/core/ang/af.js:L3`
-- AngularJS 1.8.2 has been end-of-life since January 2022, and no further upstream releases are expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2`
+- AngularJS 1.8.2 has been end-of-life since January 2022, and no further upstream releases are expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2` For a quantified analysis of this AngularJS surface and the phased plan to migrate it to React, see [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md).
 
 ## Developer Documentation
 
+- [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md) — quantified analysis of the AngularJS form surface and the phased React migration assessment.
 - [Full AngularJS Integration](../docs/angular.md) — integrating between Afform and vanilla AngularJS.
 - [Writing Forms](../docs/writing.md) — Afform as basic AngularJS templates.
 - [Embedding Forms](../docs/embed.md) — Afform as a reusable building block.
