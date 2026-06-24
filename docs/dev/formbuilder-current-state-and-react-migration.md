@@ -121,7 +121,7 @@ Every in-scope area receives a complexity rating; none is left unrated.
 | Core runtime (`af`/`afCore`) | **Medium** | Declarative surface limits blast radius, but 146 `$scope` references and APIv4 binding must be ported. `Source: ext/afform/core/ang` |
 | SearchKit-embedding boundary | **Medium–High** | 48 components / 232 `$scope` references embedded where forms host search displays. `Source: ext/search_kit/ang` |
 | Shared `crmUi` base | **High** | 1,372 lines used across ~11 extensions / ~31 manifests. `Source: ang/crmUi.js`, `Source: ext/` |
-| Admin editor (`afGuiEditor`) | **Very High** | 304 `$scope` references; jQuery-UI `ui-sortable` drag-and-drop bridged via `$timeout`/`$scope.$apply`; `afGui` runtime `$parse` string-eval. `Source: ext/afform/admin/ang/afGuiEditor.js:L461-L482`, `Source: ext/afform/admin/ang/afGuiEditor.js:L9-L11` |
+| Admin editor (`afGuiEditor`) | **Very High** | 304 `$scope` references; jQuery-UI `ui-sortable` drag-and-drop bridged via `$timeout`/`$scope.$apply`; `afGui` runtime `$parse` string-eval. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`, `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js:L104-L113`, `Source: ext/afform/admin/ang/afGuiEditor.js:L13` |
 
 ### Lowest-Risk First Slice
 
@@ -129,11 +129,11 @@ The lowest-risk first slice is **rendering existing `.aff.html` forms via React 
 
 ### Hardest Components
 
-The hardest target is the **`afGuiEditor`** editor. It bridges jQuery-UI `ui-sortable` drag-and-drop into Angular through `$timeout` + `$scope.$apply` `Source: ext/afform/admin/ang/afGuiEditor.js:L461-L482`, and its `afGui` service performs runtime string evaluation of markup attributes via `$parse`, gated only by a `doNotEval = ['filters']` allow-list. `Source: ext/afform/admin/ang/afGuiEditor.js:L9-L11` Compounding this is the shared **`crmUi` base** (1,372 lines) used across ~17 core extensions / 31 `.ang.php` manifests, so the editor cannot be migrated in isolation from the base it shares with the rest of the AngularJS estate. `Source: ang/crmUi.js`, `Source: ext/`
+The hardest target is the **`afGuiEditor`** editor. It bridges jQuery-UI `ui-sortable` drag-and-drop into Angular through `$timeout` + `$scope.$apply` `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`, `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js:L104-L113`, and its `afGui` service performs runtime string evaluation of markup attributes via `$parse`, gated only by a `doNotEval = ['filters']` allow-list. `Source: ext/afform/admin/ang/afGuiEditor.js:L13` Compounding this is the shared **`crmUi` base** (1,372 lines) used across ~11 extensions / ~31 `.ang.php` manifests, so the editor cannot be migrated in isolation from the base it shares with the rest of the AngularJS estate. `Source: ang/crmUi.js`, `Source: ext/`
 
 ### Phased Sequence
 
-A phased, screen-by-screen sequence isolates risk: establish interop first, migrate the declarative forms (lowest risk) `Source: ext/afform/docs/angular.md:L3`, then progressively tackle the `af-*` field vocabulary and the SearchKit boundary `Source: ext/search_kit/ang`, and finally the editor (hardest) `Source: ext/afform/admin/ang/afGuiEditor.js:L461-L482`, before decommissioning AngularJS 1.8.2. `Source: Technical Specification §3.2.2`
+A phased, screen-by-screen sequence isolates risk: establish interop first, migrate the declarative forms (lowest risk) `Source: ext/afform/docs/angular.md:L3`, then progressively tackle the `af-*` field vocabulary and the SearchKit boundary `Source: ext/search_kit/ang`, and finally the editor (hardest) `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`, before decommissioning AngularJS 1.8.2. `Source: Technical Specification §3.2.2`
 
 ```mermaid
 flowchart LR
