@@ -38,6 +38,8 @@ Sysadmins and developers may enable FormBuilder via the UI extensions page or wi
 cv en afform_admin
 ```
 
+`Source: ext/afform/admin/info.xml:L3`
+
 ## Overview & Purpose
 
 FormBuilder is registered under the key `org.civicrm.afform_admin` with the product name "FormBuilder" and the purpose "Administer, edit and compose dynamic forms". `Source: ext/afform/admin/info.xml:L2-L5`
@@ -56,14 +58,14 @@ The editor is organized around a single host component, `afGuiEditor`, which is 
 | `afGuiContainer` | A layout container (fieldset / block) that holds child elements. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiContainer.component.js` |
 | `afGuiEntity` | Binds a container to a CiviCRM entity. `Source: ext/afform/admin/ang/afGuiEditor/afGuiEntity.component.js` |
 | `afGuiField` | A single form field control. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiField.component.js` |
-| `afGuiText` / `afGuiMarkup` | Static text and rich-markup elements. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiText.component.js` |
+| `afGuiText` / `afGuiMarkup` | Static text and rich-markup elements. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiText.component.js` `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiMarkup.component.js` |
 | `afGuiButton` | A submit/action button element. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiButton.component.js` |
 | `afGuiTabset` | Groups containers into tabs. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiTabset.component.js` |
-| `afGuiSearch` / `afGuiSearchDisplay` | Embeds a SearchKit display into a form. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiSearchDisplay.component.js` |
-| `afGuiClause` / `afGuiCondition` | Build the filter clauses and display conditions. `Source: ext/afform/admin/ang/afGuiEditor/afGuiClause.component.js` |
+| `afGuiSearch` / `afGuiSearchDisplay` | Embeds a SearchKit display into a form. `Source: ext/afform/admin/ang/afGuiEditor/afGuiSearch.component.js` `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiSearchDisplay.component.js` |
+| `afGuiClause` / `afGuiCondition` | Build the filter clauses and display conditions. `Source: ext/afform/admin/ang/afGuiEditor/afGuiClause.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiCondition.component.js` |
 | `afGuiElements` | The palette of draggable fields, blocks, and elements. `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js` |
-| `afGuiMenuItemStyle` / `Background` / `Border` / `Collapsible` | Menu-item style controls for containers. `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemStyle.component.js` |
-| `afGuiContainerMultiToggle` / `afGuiEditOptions` | Container multi-select toggle and edit-option controls. `Source: ext/afform/admin/ang/afGuiEditor/afGuiContainerMultiToggle.component.js` |
+| `afGuiMenuItemStyle` / `Background` / `Border` / `Collapsible` | Menu-item style controls for containers. `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemStyle.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemBackground.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemBorder.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemCollapsible.component.js` |
+| `afGuiContainerMultiToggle` / `afGuiEditOptions` | Container multi-select toggle and edit-option controls. `Source: ext/afform/admin/ang/afGuiEditor/afGuiContainerMultiToggle.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiEditOptions.component.js` |
 
 In total the extension defines **23 AngularJS components** across its `ang/` tree (modules `afAdmin` and `afGuiEditor`). `Source: ext/afform/admin/ang`
 
@@ -78,11 +80,10 @@ A central responsibility is *runtime string evaluation*. The PHP side produces f
 The allow-list of keys that are skipped (never evaluated) is a single entry, `filters`:
 
 ```js
-// Parse strings of javascript that php couldn't interpret
-const doNotEval = ['filters'];
+      const doNotEval = ['filters'];
 ```
 
-`Source: ext/afform/admin/ang/afGuiEditor.js:L8,L13` (the `// Parse strings…` header is at L8 and the `doNotEval` allow-list at L13; explanatory comments occupy L9–L12).
+`Source: ext/afform/admin/ang/afGuiEditor.js:L13`
 
 The `looksLikeJs()` heuristic gate decides which strings are worth evaluating: object literals (`{…}`), array literals (`[…]`), or a `ts(` translation call. `Source: ext/afform/admin/ang/afGuiEditor.js:L34-L41` This runtime evaluation of attribute strings into values is one of the hardest pieces to reproduce outside AngularJS, because it relies on the `$parse` expression engine.
 
@@ -103,19 +104,19 @@ sequenceDiagram
     P->>S: sortstart (body gets .af-gui-dragging)
     S->>E: sortover highlights target .af-gui-container
     U->>S: drop on container
-    S->>M: insert node into #35;children array
+    S->>M: insert dropped node into children array
     S-->>P: $timeout + $scope.$apply (re-enter Angular digest)
     M->>E: canvas re-renders from updated layout
     S->>E: sortbeforestop removes drag classes
 ```
 
-*Diagram D3: drag-and-drop editing flow. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`; digest re-entry at `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js:L104-L113`.*
+*Diagram D3: drag-and-drop editing flow; on drop, the node is inserted into the layout model's `#children` array. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`; digest re-entry at `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js:L104-L113`.*
 
 ## Reading & Writing `.aff.html`
 
 The editor loads a form's definition together with its supporting metadata through the `Afform` APIv4 entity, and persists edits back through the same entity. All of these calls go through the `crmApi4` client that the `afGui` service injects. `Source: ext/afform/admin/ang/afGuiEditor.js:L6`
 
-- **Load:** `Afform.loadAdminData` returns the form definition plus the entity/field/search metadata the editor needs. `Source: ext/afform/admin/ang/afGuiEditor/afGuiEditor.component.js:L296` (the `afGui` service then processes those results — `Source: ext/afform/admin/ang/afGuiEditor.js:L160`).
+- **Load:** `Afform.loadAdminData` returns the form definition plus the entity/field/search metadata the editor needs. `Source: ext/afform/admin/ang/afGuiEditor/afGuiEditor.component.js:L296` (the `afGui` service then processes those results — `Source: ext/afform/admin/ang/afGuiEditor.js:L160`). Server-side, `loadAdminData` reads each form's definition through the `Afform.get` API: its private `loadForm()` helper calls `Afform::get(...)`, so `Afform.get` is the underlying read path the editor relies on. `Source: ext/afform/admin/Civi/Api4/Action/Afform/LoadAdminData.php:L264-L265`
 - **Supporting lookups:** saved-search options for embeddable displays are fetched with `crmApi4('SavedSearch', 'get', …)`. `Source: ext/afform/admin/ang/afGuiEditor.js:L221`
 - **Save:** edits are written with `Afform.save`. `Source: ext/afform/admin/ang/afGuiEditor/afGuiEditor.component.js:L728`
 
@@ -140,19 +141,17 @@ graph TD
 
 *Diagram D4: dependency and `crmUi` blast-radius graph. Requires edges from `Source: ext/afform/admin/info.xml:L32-L35`; blast-radius counts from `Source: ext/`.*
 
-Because the editor sits on top of the core runtime and SearchKit, and all three share the `crmUi` base, FormBuilder is the highest-risk surface in a React migration. The sibling [Form Core (afform) runtime](../core/README.md) README documents the runtime side of this chain.
+Because the editor sits on top of the core runtime and SearchKit, and all three share the `crmUi` base, FormBuilder has the widest dependency surface of the three modules. The sibling [Form Core (afform) runtime](../core/README.md) README documents the runtime side of this chain.
 
 ## Known Limitations
 
-- The editor is built on **AngularJS 1.8.2**, which has been **end-of-life since January 2022**; this is the principal driver of the React-migration assessment.
-- The drag-and-drop relies on **`angular-ui-sortable` 0.19.0**, an unmaintained AngularJS-era wrapper over jQuery-UI's sortable. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`
+- The editor is built on **AngularJS 1.8.2**, which has been **end-of-life since January 2022** with no further upstream releases expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2`
+- The drag-and-drop relies on **`angular-ui-sortable` 0.19.0**, an unmaintained AngularJS-era wrapper over jQuery-UI's sortable. `Source: composer.json:L167-L168` The editor's drag handlers build on it. `Source: ext/afform/admin/ang/afGuiEditor.js:L468-L490`
 - The `afGui` service performs **runtime string evaluation** of markup attributes via `$parse` (gated by the `doNotEval` allow-list), which has no direct equivalent outside AngularJS. `Source: ext/afform/admin/ang/afGuiEditor.js:L13-L31`
-- For the full complexity analysis and phased migration plan, see [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md).
 
 ## Developer Documentation
 
 - [Form Core (afform) runtime](../core/README.md) — the sibling runtime that renders and processes the forms this editor builds.
-- [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md) — quantified AngularJS surface and React migration complexity assessment.
 - [FormBuilder (afform) overview](../README.md) — the parent extension overview.
 - [Full AngularJS Integration](../docs/angular.md) — integrating between Afform and vanilla AngularJS.
 - [Writing Forms](../docs/writing.md) — Afform as basic AngularJS templates.

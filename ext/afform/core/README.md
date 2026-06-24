@@ -5,7 +5,7 @@
 This module is the engine behind FormBuilder: it ships the reusable `af-*` element vocabulary, the form controllers that bind entity data onto `$scope`, and a Standalone bundle that loads the runtime.
 
 - Declaratively renders AngularJS-based forms from `.aff.html` definitions using the `af-*` vocabulary. `Source: ext/afform/core/ang/af.ang.php:L13-L21`
-- Reads and writes entity data through the `Afform` APIv4 entity via `crmApi4` (`prefill` / `submit`). `Source: ext/afform/core/ang/af/afForm.component.js:L112`
+- Reads and writes entity data through the `Afform` APIv4 entity via `crmApi4` (`prefill` / `submit`). `Source: ext/afform/core/ang/af/afForm.component.js:L117`
 - Provides the reusable `af-*` directive vocabulary shared across Afform-based screens. `Source: ext/afform/core/ang/af.ang.php:L13-L21`
 - Registers an `afformStandalone` bundle that loads all available runtime modules. `Source: ext/afform/core/ang/afformStandalone.js:L3`
 
@@ -30,7 +30,7 @@ This module is the engine behind FormBuilder: it ships the reusable `af-*` eleme
 * CiviCRM core (the extension version and compatibility track the CiviCRM core version). `Source: ext/afform/core/info.xml:L16-L18`
 * The `authx` extension, which is a hard dependency (see [Dependencies](#dependencies)). `Source: ext/afform/core/info.xml:L43-L45`
 
-> Version note: the parent `ext/afform/README.md` still lists "PHP v7.2+", which is stale. The live `info.xml` manifest declares PHP 8.0–8.4, which is authoritative. `Source: ext/afform/core/info.xml:L20-L26`
+> Version note: the parent `ext/afform/README.md` still lists an older PHP requirement that is now stale. The live `info.xml` manifest declares PHP 8.0–8.4, which is authoritative. `Source: ext/afform/core/info.xml:L20-L26`
 
 ## Installation (CLI, Git)
 
@@ -40,13 +40,15 @@ Sysadmins and developers may enable Form Core via the UI extensions page or with
 cv en afform
 ```
 
+`Source: ext/afform/core/info.xml:L3`
+
 ## Overview & Purpose
 
 Form Core declares the extension key `org.civicrm.afform`, the product name "Form Core", and the description "Core functionality for rendering and processing dynamic forms". `Source: ext/afform/core/info.xml:L2-L5`
 
 The name expands as documented in the APIv4 entity: "Afform stands for *The Affable Administrative Angular Form Framework*." `Source: ext/afform/core/Civi/Api4/Afform.php:L12`
 
-In the project's own developer docs, Afform is framed as "a subset of AngularJS -- it emphasizes the use of *directives* as a way to *choose and arrange* the parts of" a form. `Source: ext/afform/docs/angular.md:L3` In practice, a form author works with declarative *blocks* and *directives* rather than imperative controller code. That declarative nature is the single largest factor lowering the risk of migrating the rendering path to another framework.
+In the project's own developer docs, Afform is framed as "a subset of AngularJS -- it emphasizes the use of *directives* as a way to *choose and arrange* the parts of" a form. `Source: ext/afform/docs/angular.md:L3` In practice, a form author works with declarative *blocks* and *directives* rather than imperative controller code. This declarative, framework-agnostic style means a form definition describes *what* to render rather than encoding imperative AngularJS logic.
 
 ## Architecture Fit
 
@@ -76,7 +78,7 @@ flowchart TB
 
 ## Key Modules
 
-Form Core declares **three** AngularJS modules: `af`, `afCore`, and `afformStandalone`. `Source: ext/afform/core/ang` Module declarations live directly under `ang/` (for example `ang/af.js` and `ang/afCore.js`); the matching `ang/af/` and `ang/afCore/` subfolders hold the component, directive, and element *implementations* — note that there is no `ang/af/af.js`.
+Form Core declares **three** AngularJS modules: `af`, `afCore`, and `afformStandalone`. `Source: ext/afform/core/ang` Module declarations live directly under `ang/` (for example `ang/af.js` and `ang/afCore.js`); the matching `ang/af/` and `ang/afCore/` subfolders hold the component, directive, and element *implementations* rather than the module declarations themselves.
 
 - **`af`** — the declarative form-vocabulary module, declared with `angular.module('af', CRM.angRequires('af'));`. `Source: ext/afform/core/ang/af.js:L3` Its `.ang.php` manifest autoloads `ang/af/*.js`, declares a `crmUtil` dependency, and exports the directives `af-entity`, `af-fieldset`, `af-form`, `af-join`, `af-repeat`, `af-repeat-item`, and `af-field`. `Source: ext/afform/core/ang/af.ang.php:L13-L21`
 - **`afCore`** — the shared runtime / API-binding module, declared in `ang/afCore.js` with `angular.module('afCore', CRM.angRequires('afCore'));`. `Source: ext/afform/core/ang/afCore.js:L3` It carries a richer dependency surface, requiring `crmUi`, `crmUtil`, `api4`, and `ngSanitize` among others. `Source: ext/afform/core/ang/afCore.ang.php:L10`
@@ -116,7 +118,7 @@ There are **11** such `.aff.html` block definitions shipped under `ang/`. `Sourc
 
 ## How a `.aff.html` Form Loads & Renders
 
-A `.aff.html` form is declarative markup of `af-form` / `af-field` (and related) elements. When the browser renders the markup, the `afForm` controller initialises and calls `Afform.prefill` through the `crmApi4` client to load the form definition together with any existing entity values; those values are bound onto `$scope`. On submission, the collected `$scope` model is sent back through `Afform.submit`. The server-side lifecycle is exposed by the `Afform` APIv4 entity. `Source: ext/afform/core/ang/af/afForm.component.js:L112` `Source: ext/afform/core/Civi/Api4/Afform.php:L14-L19`
+A `.aff.html` form is declarative markup of `af-form` / `af-field` (and related) elements. When the browser renders the markup, the `afForm` controller initialises and calls `Afform.prefill` through the `crmApi4` client to load the form definition together with any existing entity values; those values are bound onto `$scope`. On submission, the collected `$scope` model is sent back through `Afform.submit`. The server-side lifecycle is exposed by the `Afform` APIv4 entity. `Source: ext/afform/core/ang/af/afForm.component.js:L117` `Source: ext/afform/core/Civi/Api4/Afform.php:L14-L19`
 
 ```mermaid
 sequenceDiagram
@@ -145,48 +147,48 @@ The runtime lifecycle most relevant to rendering is the subset **Get → Prefill
 On load, the form controller fetches the definition and data:
 
 ```js
-return crmApi4('Afform', 'prefill', params)
+          return crmApi4('Afform', 'prefill', params)
 ```
 
-`Source: ext/afform/core/ang/af/afForm.component.js:L112`
+`Source: ext/afform/core/ang/af/afForm.component.js:L117`
 
 On submission, it posts the collected model back:
 
 ```js
-const submitApi = crmApi4('Afform', 'submit', {
-  name: ctrl.getFormMeta().name,
-  args: args,
+        const submitApi = crmApi4('Afform', 'submit', {
+          name: ctrl.getFormMeta().name,
+          args: args,
 ```
 
-`Source: ext/afform/core/ang/af/afForm.component.js:L466-L468` (the full object also includes `values: data,` at L469).
+`Source: ext/afform/core/ang/af/afForm.component.js:L472-L474` (the full object also includes `values: data,` at L475).
 
 ## $scope & Data-Binding Patterns
 
 By default, Afform creates a `$scope` exposing three variables: `routeParams` (a reference to the `$routeParams` service), `meta` (an object that for now contains the form name), and `ts` (the string-translation helper, used as `{{ts('Hello world')}}`). `Source: ext/afform/docs/writing.md:L6-L12`
 
-The form-level `afForm` component has no template of its own; on init it makes its controller available by adding it to the parent scope, so child `af-field` / `af-fieldset` elements can reach the shared form model. `Source: ext/afform/core/ang/af/afForm.component.js:L31-L33`
+The form-level `afForm` component has no template of its own; on init it makes its controller available by adding it to the parent scope, so child `af-field` / `af-fieldset` elements can reach the shared form model. `Source: ext/afform/core/ang/af/afForm.component.js:L34-L36`
 
 ```js
-// This component has no template. It makes its controller available within it by adding it to the parent scope.
-$scope.$parent[this.ctrl] = this;
+        // This component has no template. It makes its controller available within it by adding it to the parent scope.
+        // Exposing it by name (this.ctrl) is how child directives/templates reach this form controller through $scope.
+        $scope.$parent[this.ctrl] = this;
 ```
 
-`Source: ext/afform/core/ang/af/afForm.component.js:L32-L33`
+`Source: ext/afform/core/ang/af/afForm.component.js:L34-L36`
 
 ## Dependencies
 
 - **Required extension — `authx`.** The manifest declares `<requires><ext>authx</ext></requires>`, so Form Core cannot be enabled without it. `Source: ext/afform/core/info.xml:L43-L45`
 - **Shared AngularJS base — `crmUi` / `crmUtil`.** The `af` module requires `crmUtil`, and the broader Afform runtime builds on the shared `ang/crmUi.js` UI-helper base. `Source: ext/afform/core/ang/af.ang.php:L11` `Source: ang/crmUi.js`
-- **SearchKit (boundary).** When a form embeds a search display (`crmSearchDisplay`), it depends on SearchKit. This is a boundary dependency used by embedding forms; it is not part of Form Core itself.
+- **SearchKit (boundary).** When a form embeds a search display (`crmSearchDisplay`), it depends on SearchKit. Form Core recognises the SearchKit display tags (including `crm-search-display`) when parsing a form. This is a boundary dependency used by embedding forms; it is not part of Form Core itself. `Source: ext/afform/core/Civi/Afform/Utils.php:L243-L246`
 
 ## Known Limitations
 
 - The entire `af` / `afCore` tier is built on AngularJS — every module is registered through `angular.module(...)`. `Source: ext/afform/core/ang/af.js:L3`
-- AngularJS 1.8.2 has been end-of-life since January 2022, and no further upstream releases are expected. `Source: Technical Specification §3.2.2` This end-of-life status is the principal driver of the React-migration assessment; see [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md) for the quantified analysis and the phased plan.
+- AngularJS 1.8.2 has been end-of-life since January 2022, and no further upstream releases are expected. `Source: composer.json:L145-L146` `Source: Technical Specification §3.2.2`
 
 ## Developer Documentation
 
-- [Current State & React Migration](../../../docs/dev/formbuilder-current-state-and-react-migration.md) — quantified current-state analysis and the phased React-migration assessment.
 - [Full AngularJS Integration](../docs/angular.md) — integrating between Afform and vanilla AngularJS.
 - [Writing Forms](../docs/writing.md) — Afform as basic AngularJS templates.
 - [Embedding Forms](../docs/embed.md) — Afform as a reusable building block.
