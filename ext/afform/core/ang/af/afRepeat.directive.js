@@ -5,6 +5,7 @@
       return {
         restrict: 'A',
         require: ['?afFieldset', '?afJoin'],
+        // The transcluded inner block markup is re-rendered once per item in the backing data array (see afRepeat.html).
         transclude: true,
         scope: {
           min: '=',
@@ -21,6 +22,7 @@
           $scope.element = $el;
         },
         controller: function($scope) {
+          // Pad the entity controller's backing data array up to `min`, pushing the correct empty shape per repeat type - guarantees at least `min` rendered items.
           this.getItems = $scope.getItems = function() {
             const data = getEntityController().getData();
             while ($scope.min && data.length < $scope.min) {
@@ -29,6 +31,7 @@
             return data;
           };
 
+          // 'join' (when inside an afJoin) vs 'fieldset' selects the backing data shape: a join row vs a {fields:{}} record.
           function getRepeatType() {
             return $scope.afJoin ? 'join' : 'fieldset';
           }
@@ -43,6 +46,7 @@
             $scope.getItems().push(getRepeatType() === 'join' ? {} : {fields: {}});
           };
 
+          // Deep-clone the previous item's data (angular.copy) into a new, independent repeat item.
           $scope.copyItem = function() {
             const data = $scope.getItems();
             const last = data[data.length - 1];

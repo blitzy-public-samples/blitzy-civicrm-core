@@ -18,6 +18,7 @@
         const joinOffsets = {};
         const ts = $scope.ts = CRM.ts('org.civicrm.afform');
 
+        // The fieldset is the data provider: inside an <af-form> it reads/writes the form's entity model (by modelName); standalone it falls back to a local buffer.
         this.getData = function() {
           return ctrl.afFormCtrl ? ctrl.afFormCtrl.getData(ctrl.modelName) : localData;
         };
@@ -27,6 +28,7 @@
             // If there is no Afform entity, get the name of embedded search display
             $element.find('[search-name][display-name]').attr('display-name');
         };
+        // getEntity/getEntityType/getFieldData (with getName above) expose the entity context that child af-fields read from and write to.
         this.getEntity = function() {
           return this.afFormCtrl ? this.afFormCtrl.getEntity(this.modelName) : null;
         };
@@ -63,6 +65,7 @@
         };
 
         // If `storeValue` setting is enabled, field values are cached in localStorage
+        // Cache key namespaces stored values by form name + fieldset name.
         function getCacheKey() {
           return 'afform:' + ctrl.getFormName() + ctrl.getName();
         }
@@ -77,6 +80,7 @@
         };
 
         this.$onInit = function() {
+          // Watch this fieldset's field values: notify embedded search displays of filter changes (crmFormChangeFilters), and persist values to localStorage when storeValues is enabled.
           $scope.$watch(ctrl.getFieldData, (newVal, oldVal) => {
             $element[0].dispatchEvent(new Event('crmFormChangeFilters'));
             if (this.storeValues) {

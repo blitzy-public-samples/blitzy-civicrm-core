@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FormBuilder Documentation &amp; React Migration Assessment</title>
+  <meta name="description" content="Executive summary of CiviCRM FormBuilder (Afform) as-is documentation and a phased React migration assessment.">
+  <!-- Inline (empty) favicon keeps the deck fully self-contained with no extra requests. -->
+  <link rel="icon" href="data:,">
+
+  <!-- Google Fonts: Inter (body), Space Grotesk (display), Fira Code (mono/eyebrows) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- reveal.js 5.1.0 core + base theme (CDN, pinned) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/white.css" id="theme">
+
+  <style>
+    /* ====================================================================
+       Blitzy brand theme (embedded inline; canonical theme file is absent).
+       The :root custom-property block below is reproduced verbatim per the
+       Executive Presentation rule (AAP 0.10) and must remain byte-identical.
+       ==================================================================== */
+:root {
+  --blitzy-primary: #5B39F3;
+  --blitzy-primary-dark: #2D1C77;
+  --blitzy-primary-navy: #1A105F;
+  --blitzy-primary-light: #7A6DEC;
+  --blitzy-primary-deep: #4101DB;
+  --blitzy-accent-teal: #94FAD5;
+  --blitzy-surface-0: #FFFFFF;
+  --blitzy-surface-1: #F4EFF6;
+  --blitzy-surface-2: #F2F0FE;
+  --blitzy-surface-3: #F5F5F5;
+  --blitzy-border: #D9D9D9;
+  --blitzy-border-soft: rgba(91, 57, 243, 0.18);
+  --blitzy-text: #333333;
+  --blitzy-text-muted: #999999;
+  --blitzy-text-invert: #FFFFFF;
+  --ff-body: 'Inter', system-ui, sans-serif;
+  --ff-display: 'Space Grotesk', 'Inter', sans-serif;
+  --ff-mono: 'Fira Code', 'Courier New', monospace;
+  --gradient-hero: linear-gradient(68deg, #7A6DEC 15.56%, #5B39F3 62.74%, #4101DB 84.44%);
+  --gradient-divider: linear-gradient(135deg, #2D1C77 0%, #5B39F3 100%);
+  --gradient-accent-bar: linear-gradient(90deg, #5B39F3 0%, #94FAD5 100%);
+}
+
+    /* ---------- Base / reset ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--blitzy-primary-navy); }
+
+    .reveal {
+      font-family: var(--ff-body);
+      font-weight: 400;
+      font-size: 34px;
+      color: var(--blitzy-text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .reveal .slides { text-align: left; }
+
+    /* Default content slide */
+    .reveal .slides > section {
+      height: 100%;
+      padding: 70px 92px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      background: var(--blitzy-surface-0);
+      overflow: hidden;
+    }
+
+    /* ---------- Typography ---------- */
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: var(--ff-display);
+      color: var(--blitzy-primary-dark);
+      font-weight: 700;
+      line-height: 1.08;
+      margin: 0;
+      text-transform: none;
+      letter-spacing: -0.015em;
+    }
+    .reveal h1 { font-size: 2.9em; }
+    .reveal h2 { font-size: 1.95em; }
+    .reveal h3 { font-size: 1.25em; }
+    .reveal h2 .accent { color: var(--blitzy-primary); }
+    .reveal p { font-size: 1.0em; line-height: 1.45; margin: 0.25em 0; }
+    .reveal .lead { font-size: 1.1em; color: var(--blitzy-text-muted); }
+
+    /* Bulleted lists with gradient markers */
+    .reveal ul { list-style: none; margin: 0.5em 0 0 0; padding: 0; }
+    .reveal ul li {
+      position: relative;
+      padding-left: 1.7em;
+      margin: 0.5em 0;
+      font-size: 1.0em;
+      line-height: 1.4;
+      color: var(--blitzy-text);
+    }
+    .reveal ul li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.5em;
+      width: 0.72em;
+      height: 0.72em;
+      border-radius: 4px;
+      background: var(--gradient-accent-bar);
+    }
+
+    /* Inline monospace expressions (Fira Code) */
+    .reveal code, .reveal .mono {
+      font-family: var(--ff-mono);
+      font-size: 0.88em;
+      font-weight: 500;
+      background: var(--blitzy-surface-2);
+      color: var(--blitzy-primary-deep);
+      padding: 2px 9px;
+      border-radius: 6px;
+      border: 1px solid var(--blitzy-border-soft);
+    }
+
+    /* ---------- Eyebrow + section header ---------- */
+    .eyebrow {
+      font-family: var(--ff-mono);
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      font-size: 0.62em;
+      color: var(--blitzy-primary);
+      display: block;
+      margin-bottom: 0.4em;
+    }
+    .section-head { margin-bottom: 0.55em; flex: 0 0 auto; }
+    .section-head::after {
+      content: "";
+      display: block;
+      width: 132px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--gradient-accent-bar);
+      margin-top: 0.55em;
+    }
+
+    /* ---------- Title slide ---------- */
+    .reveal .slides > section.slide-title {
+      background: var(--gradient-hero);
+      color: var(--blitzy-text-invert);
+      justify-content: center;
+    }
+    .slide-title h1 { color: var(--blitzy-text-invert); max-width: 26ch; }
+    .slide-title .eyebrow { color: var(--blitzy-accent-teal); }
+    .slide-title .subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 1.15em;
+      margin-top: 0.55em;
+      max-width: 44ch;
+      line-height: 1.4;
+    }
+    .slide-title .title-meta {
+      margin-top: 1.1em;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 0.8em;
+    }
+
+    /* ---------- Section divider slide ---------- */
+    .reveal .slides > section.slide-divider {
+      background: var(--gradient-divider);
+      color: var(--blitzy-text-invert);
+      justify-content: center;
+    }
+    .slide-divider h2 { color: var(--blitzy-text-invert); font-size: 2.6em; }
+    .slide-divider .eyebrow { color: var(--blitzy-accent-teal); }
+
+    /* ---------- Closing slide ---------- */
+    .reveal .slides > section.slide-closing {
+      background: var(--blitzy-primary-navy);
+      color: var(--blitzy-text-invert);
+      justify-content: center;
+    }
+    .slide-closing .eyebrow { color: var(--blitzy-accent-teal); }
+    .slide-closing h2 { color: var(--blitzy-text-invert); font-size: 2.7em; max-width: 18ch; }
+    .slide-closing ul li { color: rgba(255, 255, 255, 0.9); }
+    .slide-closing ul li::before { background: var(--blitzy-accent-teal); }
+
+    /* ---------- Hero icon (title + dividers + closing) ---------- */
+    .hero-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 116px;
+      height: 116px;
+      border-radius: 26px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      margin-bottom: 34px;
+    }
+    .hero-icon svg { width: 60px; height: 60px; color: var(--blitzy-accent-teal); stroke-width: 1.8; }
+
+    /* ---------- Accent bar + brand lockup (closing) ---------- */
+    .accent-bar {
+      width: 264px;
+      height: 10px;
+      border-radius: 6px;
+      background: var(--gradient-accent-bar);
+      margin: 30px 0 26px 0;
+    }
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-family: var(--ff-display);
+      font-weight: 600;
+      font-size: 1.0em;
+      color: var(--blitzy-text-invert);
+      letter-spacing: 0.01em;
+    }
+    .brand-lockup .mark {
+      width: 44px;
+      height: 44px;
+      border-radius: 11px;
+      background: var(--gradient-accent-bar);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-lockup .mark svg { width: 24px; height: 24px; color: var(--blitzy-primary-navy); stroke-width: 2.2; }
+    .brand-lockup .muted { color: var(--blitzy-text-muted); font-weight: 400; font-family: var(--ff-body); }
+
+    /* ---------- KPI cards ---------- */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 26px;
+      margin-top: 0.3em;
+    }
+    .kpi-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .kpi-grid.cols-2 { grid-template-columns: repeat(2, 1fr); max-width: 64%; }
+    .kpi-card {
+      background: var(--blitzy-surface-2);
+      border: 1px solid var(--blitzy-border-soft);
+      border-radius: 18px;
+      padding: 30px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 8px 24px rgba(45, 28, 119, 0.07);
+    }
+    .kpi-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 14px;
+      background: var(--blitzy-surface-0);
+      border: 1px solid var(--blitzy-border-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .kpi-icon svg { width: 30px; height: 30px; color: var(--blitzy-primary); stroke-width: 2; }
+    .kpi-value {
+      font-family: var(--ff-display);
+      font-weight: 700;
+      font-size: 2.35em;
+      color: var(--blitzy-primary-dark);
+      line-height: 1;
+    }
+    .kpi-label { font-size: 0.74em; color: var(--blitzy-text-muted); font-weight: 500; line-height: 1.3; }
+
+    /* ---------- Icon row ---------- */
+    .icon-row { display: flex; gap: 42px; margin-top: 0.9em; flex-wrap: wrap; }
+    .icon-row .icon-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      width: 196px;
+      text-align: center;
+    }
+    .icon-row .icon-item .chip {
+      width: 92px;
+      height: 92px;
+      border-radius: 22px;
+      background: var(--blitzy-surface-2);
+      border: 1px solid var(--blitzy-border-soft);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-row .icon-item .chip svg { width: 44px; height: 44px; color: var(--blitzy-primary); stroke-width: 1.9; }
+    .icon-row .icon-item span { font-size: 0.72em; color: var(--blitzy-text); font-weight: 500; line-height: 1.3; }
+
+    /* ---------- Styled table ---------- */
+    .reveal table.brand-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5em;
+      font-size: 0.92em;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+    .brand-table thead th {
+      background: var(--blitzy-primary-dark);
+      color: var(--blitzy-text-invert);
+      font-family: var(--ff-display);
+      font-weight: 600;
+      text-align: left;
+      padding: 18px 24px;
+    }
+    .brand-table tbody td {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--blitzy-border);
+      color: var(--blitzy-text);
+      vertical-align: middle;
+    }
+    .brand-table tbody tr:nth-child(even) { background: var(--blitzy-surface-1); }
+    .brand-table tbody tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 5px 16px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.86em;
+      font-family: var(--ff-body);
+      white-space: nowrap;
+      /* Subtle outline so every level reads as a distinct pill, even when its
+         fill is close to the zebra-row background. */
+      border: 1px solid rgba(45, 28, 119, 0.16);
+    }
+    /* Monotonic low -> very-high heat ramp (teal -> light purple -> navy), each
+       step clearly distinct from the surface-1 (#F4EFF6) zebra rows. */
+    .badge-low { background: rgba(148, 250, 213, 0.55); color: #0B6B49; border-color: rgba(11, 107, 73, 0.22); }
+    .badge-med { background: #E3DCFC; color: var(--blitzy-primary-deep); }
+    .badge-medhigh { background: #C7B8F7; color: var(--blitzy-primary-dark); }
+    .badge-high { background: var(--blitzy-primary); color: var(--blitzy-text-invert); border-color: transparent; }
+    .badge-veryhigh { background: var(--blitzy-primary-navy); color: var(--blitzy-text-invert); border-color: transparent; }
+
+    /* ---------- Mermaid container ---------- */
+    .mermaid-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0.2em 0;
+    }
+    .reveal pre.mermaid {
+      background: transparent;
+      box-shadow: none;
+      border: none;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: var(--ff-body);
+      font-size: 1em;
+      line-height: normal;
+      text-align: center;
+      white-space: normal;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .reveal pre.mermaid svg { max-width: 100%; max-height: 600px; height: auto; font-family: var(--ff-body); }
+    /* Keep Mermaid htmlLabel text on the body font so node boxes are not clipped. */
+    .reveal pre.mermaid .nodeLabel,
+    .reveal pre.mermaid .edgeLabel,
+    .reveal pre.mermaid .cluster-label,
+    .reveal pre.mermaid foreignObject div,
+    .reveal pre.mermaid foreignObject span { font-family: var(--ff-body); }
+
+    /* Two-column content (bullets beside / under a visual) */
+    .content-note { margin-top: 0.3em; }
+    .content-note ul li { font-size: 0.92em; }
+
+    /* Slide number + controls tint */
+    .reveal .slide-number { background: rgba(91, 57, 243, 0.85); }
+    .reveal .controls { color: var(--blitzy-primary); }
+
+    /* ---------- Mobile / narrow-viewport responsiveness ---------- */
+    /* Scope: this block ONLY targets narrow phone viewports (<=600px). reveal.js
+       automatically switches to its built-in vertical scroll view below ~435px
+       (its default scrollActivationWidth), so at phone sizes the deck is a
+       scrollable stack of slides rather than a single fixed canvas. Tablet and
+       desktop widths (>=601px: the 768 / 1280 / 1920 breakpoints) are deliberately
+       left completely untouched so their already-correct layout is preserved.
+
+       The original QA finding was that at 375px the 3-column KPI grid was tiny and
+       cramped. reveal still scales each slide's 1920px width down to the viewport,
+       so the type cannot be made large without breaking reveal's canvas model
+       (which its JS actively re-applies and which destabilises under CSS overrides).
+       What CAN be done safely from CSS is reflow the dense KPI grids from three
+       columns to two, which roughly doubles each card's on-screen width and removes
+       the cramping, while every card stays fully visible (reveal's scroll view does
+       not clip). reveal's JS config (1920x1080, hash, transition), the :root
+       palette, and every pinned CDN version are untouched - these are on-canvas
+       presentation rules only. */
+
+    /* Phones (<=600px): reflow dense KPI grids from three columns to two so the
+       cards are no longer cramped; all six cards remain fully visible in reveal's
+       scroll view. Verified at 375px: 2 columns, no clipping, values legible. */
+    @media screen and (max-width: 600px) {
+      .kpi-grid,
+      .kpi-grid.cols-3,
+      .kpi-grid.cols-2 {
+        grid-template-columns: 1fr 1fr;
+        max-width: 100%;
+        gap: 22px 20px;
+      }
+      .kpi-card { padding: 26px 22px; gap: 10px; }
+      .kpi-value { font-size: 2.5em; line-height: 1.05; }
+      .kpi-label { font-size: 1.15em; line-height: 1.25; }
+      .kpi-icon { width: 56px; height: 56px; }
+      .kpi-icon svg { width: 30px; height: 30px; }
+      .icon-row { flex-wrap: wrap; gap: 26px; justify-content: center; }
+      .icon-row .icon-item { width: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- 1. TITLE -->
+      <section class="slide-title">
+        <span class="hero-icon"><i data-lucide="layout-dashboard"></i></span>
+        <span class="eyebrow">FORMBUILDER / AFFORM</span>
+        <h1>FormBuilder Documentation &amp; React Migration Assessment</h1>
+        <p class="subtitle">An as-is map of CiviCRM's Afform form-rendering stack, and a phased, lowest-risk-first plan to modernize its user interface.</p>
+        <p class="title-meta"><span class="mono">CiviCRM core 6.17.alpha1</span> &nbsp;|&nbsp; Documentation-only &nbsp;|&nbsp; Zero runtime change</p>
+      </section>
+
+      <!-- 2. CONTENT - HEADLINE / KPI -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">At a glance</span>
+          <h2>The Afform UI, <span class="accent">by the numbers</span></h2>
+        </div>
+        <div class="kpi-grid cols-3">
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="variable"></i></span>
+            <span class="kpi-value">146</span>
+            <span class="kpi-label">Core <span class="mono">$scope</span> references (<span class="mono">af</span> / <span class="mono">afCore</span>)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="variable"></i></span>
+            <span class="kpi-value">304</span>
+            <span class="kpi-label">Admin <span class="mono">$scope</span> references (<span class="mono">afGuiEditor</span>)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="layout-dashboard"></i></span>
+            <span class="kpi-value">23</span>
+            <span class="kpi-label">Editor components (<span class="mono">afGuiEditor</span>)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="file-code"></i></span>
+            <span class="kpi-value">1,372</span>
+            <span class="kpi-label">Lines in the shared <span class="mono">crmUi</span> base</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="git-branch"></i></span>
+            <span class="kpi-value">5</span>
+            <span class="kpi-label">Architecture &amp; flow diagrams</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="book-marked"></i></span>
+            <span class="kpi-value">2 + 1</span>
+            <span class="kpi-label">Module READMEs + analysis doc</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. CONTENT - ARCHITECTURE (D1) -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Current architecture</span>
+          <h2>One stack, <span class="accent">two UI generations</span></h2>
+        </div>
+        <div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TB
+    subgraph Browser["Browser (client)"]
+        subgraph Modern["Modern AngularJS tier"]
+            AF["Form Core / FormBuilder<br/>(af, afCore modules)"]
+            SK["SearchKit<br/>(crmSearchDisplay)"]
+            BASE["Shared base: crmUi / crmUtil"]
+            AF --> BASE
+            SK --> BASE
+        end
+        subgraph Legacy["Legacy server-rendered tier"]
+            QF["QuickForm + Smarty templates (jQuery)"]
+        end
+    end
+    BASE --> API["APIv4 (crmApi4)"]
+    QF --> CORE["CiviCRM core (PHP)"]
+    API --> CORE
+    CORE --> DB[("Database")]
+</pre>
+        </div>
+        <div class="content-note">
+          <ul>
+            <li>The modern AngularJS tier (<span class="mono">af</span> / <span class="mono">afCore</span>) and SearchKit share the <span class="mono">crmUi</span> base over APIv4.</li>
+            <li>The legacy QuickForm tier renders server-side and is untouched by a UI migration.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 4. SECTION DIVIDER - WHAT WE DID -->
+      <section class="slide-divider">
+        <span class="hero-icon"><i data-lucide="clipboard-check"></i></span>
+        <span class="eyebrow">Part 01</span>
+        <h2>What We Did</h2>
+      </section>
+
+      <!-- 5. CONTENT - WHAT WAS DONE -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Deliverables</span>
+          <h2>Authoritative, <span class="accent">as-is documentation</span></h2>
+        </div>
+        <ul>
+          <li>Created the Form Core (<span class="mono">af</span> / <span class="mono">afCore</span>) runtime README.</li>
+          <li>Rewrote the FormBuilder editor (<span class="mono">afGuiEditor</span>) README from a stub.</li>
+          <li>Authored a quantified current-state and React-migration analysis.</li>
+          <li>Added behavior-preserving inline comments, with zero runtime change.</li>
+        </ul>
+        <div class="icon-row">
+          <div class="icon-item"><span class="chip"><i data-lucide="book-marked"></i></span><span>Core README</span></div>
+          <div class="icon-item"><span class="chip"><i data-lucide="pencil-ruler"></i></span><span>Editor README</span></div>
+          <div class="icon-item"><span class="chip"><i data-lucide="file-text"></i></span><span>Analysis doc</span></div>
+          <div class="icon-item"><span class="chip"><i data-lucide="message-square"></i></span><span>Inline notes</span></div>
+        </div>
+      </section>
+
+      <!-- 6. SECTION DIVIDER - WHY NOW -->
+      <section class="slide-divider">
+        <span class="hero-icon"><i data-lucide="alarm-clock"></i></span>
+        <span class="eyebrow">Part 02</span>
+        <h2>Why Now</h2>
+      </section>
+
+      <!-- 7. CONTENT - WHY -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">The driver</span>
+          <h2>AngularJS is <span class="accent">end-of-life</span></h2>
+        </div>
+        <div class="kpi-grid cols-2">
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="calendar-x"></i></span>
+            <span class="kpi-value">1.8.2</span>
+            <span class="kpi-label">AngularJS version in use today</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="clock"></i></span>
+            <span class="kpi-value">Jan 2022</span>
+            <span class="kpi-label">End-of-life since this date</span>
+          </div>
+        </div>
+        <div class="content-note">
+          <ul>
+            <li>No security or compatibility fixes ship for AngularJS 1.8.2.</li>
+            <li><span class="mono">.aff.html</span> markup is declarative and framework-agnostic, which lowers migration risk.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 8. SECTION DIVIDER - ARCHITECTURE & BLAST RADIUS -->
+      <section class="slide-divider">
+        <span class="hero-icon"><i data-lucide="network"></i></span>
+        <span class="eyebrow">Part 03</span>
+        <h2>Architecture &amp; Blast Radius</h2>
+      </section>
+
+      <!-- 9. CONTENT - BLAST RADIUS (D4) -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Dependency reach</span>
+          <h2>Why the editor is <span class="accent">hard to move</span></h2>
+        </div>
+        <div class="mermaid-wrap">
+<pre class="mermaid">
+graph TD
+    ADMIN["afform_admin<br/>(FormBuilder editor)"] --> CORE["afform<br/>(Form Core runtime)"]
+    ADMIN --> SK["search_kit<br/>(crmSearchDisplay)"]
+    CORE --> AUTHX["authx"]
+    ADMIN -. uses .-> CRMUI["ang/crmUi.js<br/>(shared AngularJS base)"]
+    CORE -. uses .-> CRMUI
+    SK -. uses .-> CRMUI
+    CRMUI --- BLAST["Shared by 11 extensions /<br/>31 .ang.php manifests"]
+</pre>
+        </div>
+        <div class="content-note">
+          <ul>
+            <li>FormBuilder requires both Form Core and SearchKit to function.</li>
+            <li>The shared <span class="mono">crmUi</span> base reaches ~11 extensions / ~31 manifests.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 10. SECTION DIVIDER - RISKS & MITIGATIONS -->
+      <section class="slide-divider">
+        <span class="hero-icon"><i data-lucide="shield-check"></i></span>
+        <span class="eyebrow">Part 04</span>
+        <h2>Risks &amp; Mitigations</h2>
+      </section>
+
+      <!-- 11. CONTENT - RISK ASSESSMENT TABLE -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Complexity by area</span>
+          <h2>Rated <span class="accent">lowest to highest</span></h2>
+        </div>
+        <table class="brand-table">
+          <thead>
+            <tr><th>Area</th><th>Migration complexity</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Declarative <span class="mono">.aff.html</span> markup</td><td><span class="badge badge-low">Low</span></td></tr>
+            <tr><td>Core runtime (<span class="mono">af</span> / <span class="mono">afCore</span>)</td><td><span class="badge badge-med">Medium</span></td></tr>
+            <tr><td>SearchKit-embedding boundary</td><td><span class="badge badge-medhigh">Medium-High</span></td></tr>
+            <tr><td>Shared <span class="mono">crmUi</span> base</td><td><span class="badge badge-high">High</span></td></tr>
+            <tr><td>Admin editor (<span class="mono">afGuiEditor</span>)</td><td><span class="badge badge-veryhigh">Very High</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 12. CONTENT - MIGRATION ROADMAP (D5) -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Phased sequence</span>
+          <h2>A <span class="accent">strangler-fig</span> path</h2>
+        </div>
+        <div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart LR
+    P0["Phase 0<br/>Interop foundation<br/>(React-in-AngularJS shim)"] --> P1["Phase 1 (lowest risk)<br/>Render .aff.html forms<br/>via React at runtime"]
+    P1 --> P2["Phase 2<br/>Port af-* field/component<br/>vocabulary to React"]
+    P2 --> P3["Phase 3<br/>SearchKit display<br/>embedding boundary"]
+    P3 --> P4["Phase 4 (hardest)<br/>afGuiEditor drag-and-drop<br/>+ afGui eval + crmUi base"]
+    P4 --> P5["Phase 5<br/>Decommission<br/>AngularJS 1.8.2"]
+</pre>
+        </div>
+        <div class="content-note">
+          <ul>
+            <li>Start with the lowest-risk slice: render <span class="mono">.aff.html</span> via React.</li>
+            <li>Tackle <span class="mono">afGuiEditor</span> and the shared base last.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 13. SECTION DIVIDER - ONBOARDING & CONTINUATION -->
+      <section class="slide-divider">
+        <span class="hero-icon"><i data-lucide="compass"></i></span>
+        <span class="eyebrow">Part 05</span>
+        <h2>Onboarding &amp; Continuation</h2>
+      </section>
+
+      <!-- 14. CONTENT - ONBOARDING -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Where to start</span>
+          <h2>Everything lives <span class="accent">in the repo</span></h2>
+        </div>
+        <ul>
+          <li>Form Core runtime: <span class="mono">ext/afform/core/README.md</span>.</li>
+          <li>FormBuilder editor: <span class="mono">ext/afform/admin/README.md</span>.</li>
+          <li>Current-state and migration plan: <span class="mono">docs/dev/</span>.</li>
+          <li>Diagrams render natively on GitHub, with no tooling needed.</li>
+        </ul>
+        <div class="icon-row">
+          <div class="icon-item"><span class="chip"><i data-lucide="folder-tree"></i></span><span>Module READMEs</span></div>
+          <div class="icon-item"><span class="chip"><i data-lucide="git-pull-request"></i></span><span>Migration plan</span></div>
+          <div class="icon-item"><span class="chip"><i data-lucide="git-compare"></i></span><span>Mermaid diagrams</span></div>
+        </div>
+      </section>
+
+      <!-- 15. CONTENT - OPERATIONAL READINESS / KPI RECAP -->
+      <section>
+        <div class="section-head">
+          <span class="eyebrow">Operational readiness</span>
+          <h2>Safe today, <span class="accent">ready for tomorrow</span></h2>
+        </div>
+        <div class="kpi-grid cols-3">
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="shield-check"></i></span>
+            <span class="kpi-value">0</span>
+            <span class="kpi-label">Runtime changes made</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="check-check"></i></span>
+            <span class="kpi-value">2 / 2</span>
+            <span class="kpi-label">In-scope modules with developer READMEs</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="git-branch"></i></span>
+            <span class="kpi-value">5</span>
+            <span class="kpi-label">Architecture &amp; flow diagrams</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 16. CLOSING -->
+      <section class="slide-closing">
+        <span class="hero-icon"><i data-lucide="rocket"></i></span>
+        <span class="eyebrow">In summary</span>
+        <h2>Documented today, ready to migrate</h2>
+        <ul>
+          <li>Zero runtime risk, documentation only.</li>
+          <li>The architecture is now visible and measured.</li>
+          <li>A clear, lowest-risk-first path to React.</li>
+        </ul>
+        <div class="accent-bar"></div>
+        <div class="brand-lockup">
+          <span class="mark"><i data-lucide="zap"></i></span>
+          <span>Blitzy</span>
+          <span class="muted">&nbsp;/ FormBuilder + React</span>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- Libraries (CDN, pinned EXACTLY): reveal.js 5.1.0, Lucide 0.460.0 (UMD), Mermaid 11.4.0 (ESM) -->
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.4.0/dist/mermaid.esm.min.mjs';
+
+    // Mermaid: manual rendering (startOnLoad:false) using the Blitzy 'base' theme variables.
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      securityLevel: 'loose',
+      // Use the deck body font for label measurement so node boxes match the
+      // rendered text (avoids clipped labels from a web-font measurement race).
+      fontFamily: 'Inter, system-ui, sans-serif',
+      flowchart: { htmlLabels: true, useMaxWidth: true, padding: 14, nodeSpacing: 48, rankSpacing: 52 },
+      themeVariables: {
+        primaryColor: '#F2F0FE',
+        primaryTextColor: '#333333',
+        primaryBorderColor: '#5B39F3',
+        lineColor: '#999999',
+        secondaryColor: '#F4EFF6'
+      }
+    });
+
+    // Stash each diagram's raw source once and tag it with a stable index. The
+    // raw text is needed because rendering replaces the <pre> contents with SVG.
+    let mermaidRaw = null;
+    let renderSeq = 0;
+    // Serialize a <pre class="mermaid"> back to raw Mermaid source. The browser
+    // parses the literal <br/> in the markup into <br> ELEMENTS, so textContent
+    // would silently drop them and merge words across the intended line breaks
+    // (e.g. "Phase 0Interop"). Walk the child nodes instead: emit text verbatim
+    // (keeping arrows like --> intact) and re-emit each <br> as <br/> so Mermaid
+    // renders the multi-line node labels exactly as authored.
+    function serializeMermaidSource(el) {
+      var s = '';
+      el.childNodes.forEach(function (node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          s += node.nodeValue;
+        } else if (node.nodeName === 'BR') {
+          s += '<br/>';
+        } else {
+          s += node.textContent;
+        }
+      });
+      return s;
+    }
+    function stashMermaidRaw() {
+      if (mermaidRaw) return;
+      mermaidRaw = [];
+      document.querySelectorAll('pre.mermaid').forEach(function (el, i) {
+        mermaidRaw[i] = serializeMermaidSource(el);
+        el.setAttribute('data-idx', String(i));
+      });
+    }
+
+    // Render all Mermaid diagrams, then (re)create Lucide SVG icons so icons on
+    // later slides also appear.
+    //
+    // Rendering detail: reveal.js scales its .slides container with a CSS
+    // transform (e.g. scale(0.8)) and re-applies that transform asynchronously
+    // via its own layout(). Mermaid measures label widths with
+    // getBoundingClientRect, so a diagram laid out *inside* .slides is measured
+    // at the scaled size and its node boxes clip the labels. To measure at a
+    // true 1:1 scale we render each diagram with mermaid.render(), which lays it
+    // out in a temporary node appended to <body> (OUTSIDE the scaled .slides
+    // subtree), then inject the finished SVG into the <pre>. This is fully
+    // independent of reveal's transform timing. mermaid.run() is still invoked
+    // afterwards (and on every 'ready'/'slidechanged') per the deck spec; it is a
+    // no-op for diagrams already marked data-processed.
+    async function renderVisualsOnce() {
+      stashMermaidRaw();
+      // Wait for web fonts so Mermaid measures label widths with the real font.
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (e) { /* non-fatal */ }
+      }
+      var nodes = document.querySelectorAll('pre.mermaid:not([data-processed="true"])');
+      for (var n = 0; n < nodes.length; n++) {
+        var el = nodes[n];
+        var idx = parseInt(el.getAttribute('data-idx'), 10) || 0;
+        var src = (mermaidRaw && mermaidRaw[idx] != null) ? mermaidRaw[idx] : el.textContent;
+        try {
+          var res = await mermaid.render('mmd-' + idx + '-' + (renderSeq++), src);
+          el.innerHTML = res.svg;
+          if (typeof res.bindFunctions === 'function') { res.bindFunctions(el); }
+          el.setAttribute('data-processed', 'true');
+        } catch (err) {
+          console.error('Mermaid render error (diagram ' + idx + '):', err);
+        }
+      }
+      // Spec-required call; idempotent (already-processed diagrams are skipped).
+      try { await mermaid.run(); } catch (e) { /* processed diagrams are skipped */ }
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    }
+
+    // Serialize render passes: 'ready' and 'slidechanged' can fire nearly
+    // together (e.g. when deep-linking to a slide), and the await points inside
+    // let the two invocations interleave. A promise-chain mutex guarantees one
+    // pass fully completes -- including restoring the .slides scale transform --
+    // before the next begins, so no pass ever measures a diagram while another
+    // pass has temporarily neutralized (or restored) that transform.
+    let renderLock = Promise.resolve();
+    function renderVisuals() {
+      renderLock = renderLock.then(renderVisualsOnce, renderVisualsOnce);
+      return renderLock;
+    }
+
+    // Register handlers BEFORE initialize so the initial 'ready' event is not missed.
+    Reveal.on('ready', renderVisuals);
+    Reveal.on('slidechanged', renderVisuals);
+
+    Reveal.initialize({
+      hash: true,
+      transition: 'slide',
+      controlsTutorial: false,
+      width: 1920,
+      height: 1080,
+      center: false,
+      margin: 0.04,
+      slideNumber: 'c/t',
+      // Keep every slide loaded (display:block) so Mermaid can measure and
+      // render all diagrams up front, even those on off-screen slides.
+      viewDistance: 20,
+      mobileViewDistance: 20
+    });
+  </script>
+</body>
+</html>
