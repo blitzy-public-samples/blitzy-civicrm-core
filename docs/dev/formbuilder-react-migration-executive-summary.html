@@ -376,6 +376,45 @@
     /* Slide number + controls tint */
     .reveal .slide-number { background: rgba(91, 57, 243, 0.85); }
     .reveal .controls { color: var(--blitzy-primary); }
+
+    /* ---------- Mobile / narrow-viewport responsiveness ---------- */
+    /* Scope: this block ONLY targets narrow phone viewports (<=600px). reveal.js
+       automatically switches to its built-in vertical scroll view below ~435px
+       (its default scrollActivationWidth), so at phone sizes the deck is a
+       scrollable stack of slides rather than a single fixed canvas. Tablet and
+       desktop widths (>=601px: the 768 / 1280 / 1920 breakpoints) are deliberately
+       left completely untouched so their already-correct layout is preserved.
+
+       The original QA finding was that at 375px the 3-column KPI grid was tiny and
+       cramped. reveal still scales each slide's 1920px width down to the viewport,
+       so the type cannot be made large without breaking reveal's canvas model
+       (which its JS actively re-applies and which destabilises under CSS overrides).
+       What CAN be done safely from CSS is reflow the dense KPI grids from three
+       columns to two, which roughly doubles each card's on-screen width and removes
+       the cramping, while every card stays fully visible (reveal's scroll view does
+       not clip). reveal's JS config (1920x1080, hash, transition), the :root
+       palette, and every pinned CDN version are untouched - these are on-canvas
+       presentation rules only. */
+
+    /* Phones (<=600px): reflow dense KPI grids from three columns to two so the
+       cards are no longer cramped; all six cards remain fully visible in reveal's
+       scroll view. Verified at 375px: 2 columns, no clipping, values legible. */
+    @media screen and (max-width: 600px) {
+      .kpi-grid,
+      .kpi-grid.cols-3,
+      .kpi-grid.cols-2 {
+        grid-template-columns: 1fr 1fr;
+        max-width: 100%;
+        gap: 22px 20px;
+      }
+      .kpi-card { padding: 26px 22px; gap: 10px; }
+      .kpi-value { font-size: 2.5em; line-height: 1.05; }
+      .kpi-label { font-size: 1.15em; line-height: 1.25; }
+      .kpi-icon { width: 56px; height: 56px; }
+      .kpi-icon svg { width: 30px; height: 30px; }
+      .icon-row { flex-wrap: wrap; gap: 26px; justify-content: center; }
+      .icon-row .icon-item { width: 360px; }
+    }
   </style>
 </head>
 <body>
@@ -397,16 +436,26 @@
           <span class="eyebrow">At a glance</span>
           <h2>The Afform UI, <span class="accent">by the numbers</span></h2>
         </div>
-        <div class="kpi-grid">
+        <div class="kpi-grid cols-3">
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="variable"></i></span>
+            <span class="kpi-value">146</span>
+            <span class="kpi-label">Core <span class="mono">$scope</span> references (<span class="mono">af</span> / <span class="mono">afCore</span>)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="variable"></i></span>
+            <span class="kpi-value">304</span>
+            <span class="kpi-label">Admin <span class="mono">$scope</span> references (<span class="mono">afGuiEditor</span>)</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-icon"><i data-lucide="layout-dashboard"></i></span>
+            <span class="kpi-value">23</span>
+            <span class="kpi-label">Editor components (<span class="mono">afGuiEditor</span>)</span>
+          </div>
           <div class="kpi-card">
             <span class="kpi-icon"><i data-lucide="file-code"></i></span>
             <span class="kpi-value">1,372</span>
             <span class="kpi-label">Lines in the shared <span class="mono">crmUi</span> base</span>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-icon"><i data-lucide="variable"></i></span>
-            <span class="kpi-value">450</span>
-            <span class="kpi-label"><span class="mono">$scope</span> references (core + admin)</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-icon"><i data-lucide="git-branch"></i></span>
@@ -640,8 +689,8 @@ flowchart LR
           </div>
           <div class="kpi-card">
             <span class="kpi-icon"><i data-lucide="check-check"></i></span>
-            <span class="kpi-value">100%</span>
-            <span class="kpi-label">In-scope modules documented</span>
+            <span class="kpi-value">2 / 2</span>
+            <span class="kpi-label">In-scope modules with developer READMEs</span>
           </div>
           <div class="kpi-card">
             <span class="kpi-icon"><i data-lucide="git-branch"></i></span>

@@ -46,13 +46,13 @@ The table below is the quantitative backbone of this assessment. Each area's met
 | Non-`.aff.html` HTML templates | 25 | 64 | — |
 | JS files | 21 | 31 | SearchKit: 72 |
 | `crmApi4` client calls | 21 | 18 | — |
-| Drag-and-drop references | — | ~25 `ui-sortable` / ~27 `draggable` | — |
+| Drag-and-drop references (lines) | — | 41 `ui-sortable` / 31 `drag*` | — |
 | Shared base size | — | — | `ang/crmUi.js`: 1,372 lines |
 | `crmUi` reach | — | — | ~11 extensions / ~31 `.ang.php` manifests |
 
 `Source: ext/afform/core/ang` (Core), `Source: ext/afform/admin/ang` (Admin), `Source: ext/search_kit/ang` (SearchKit), `Source: ang/crmUi.js` and `Source: ext/` (shared base reach), `Source: ext/afform` (`.aff.html` totals). Module-declaration evidence: `Source: ext/afform/core/ang/af.js:L3`, `Source: ext/afform/admin/ang/afGuiEditor.js:L4`.
 
-> The drag-and-drop figures (~25 / ~27) are approximate descriptive reference counts, not exact construct measurements. `Source: ext/afform/admin/ang`
+> The drag-and-drop figures are literal line counts from `grep -RIn` against `ext/afform/admin/ang`: **41** lines contain `ui-sortable` (the jQuery-UI sortable directive bindings that power the editor's drag-and-drop) and **31** lines contain the broader `drag*` token family — `drag`, `draggable`, `dragging`, and `dragtarget` (the bare token `draggable` alone appears on just 4 lines). These are descriptive reference counts across both JS and HTML, not counts of unique AngularJS constructs. `Source: ext/afform/admin/ang`
 
 ### Declarative, Framework-Agnostic Markup
 

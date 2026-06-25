@@ -86,7 +86,7 @@ Form Core declares **three** AngularJS modules: `af`, `afCore`, and `afformStand
 
 ## Declarative Components & Directives
 
-The `af` surface comprises **7 components** and **11 directives**. `Source: ext/afform/core/ang` The public declarative vocabulary — the `af-*` elements and attributes a form author composes — is summarised below.
+The core runtime comprises **7 components** and **11 directives** across the `af` and `afCore` modules. `Source: ext/afform/core/ang` The public declarative vocabulary — the `af-*` elements and attributes a form author composes — is summarised in the table below; the three lower-level `afCore` API-binding directives are described immediately after it.
 
 | Element | Type | Source | Purpose |
 |---------|------|--------|---------|
@@ -100,10 +100,21 @@ The `af` surface comprises **7 components** and **11 directives**. `Source: ext/
 | `afTab` / `afTabset` | directive / component | `ext/afform/core/ang/af/afTabset.component.js` | Tabbed layout for grouping form sections |
 | `afButton` | directive | `ext/afform/core/ang/af/afButton.directive.js` | Submit / action button |
 | `afTitle` | directive | `ext/afform/core/ang/af/afTitle.directive.js` | Form title element |
+| `afCharacterCount` | component | `ext/afform/core/ang/af/afCharacterCount.component.js` | Live character-count / remaining-characters indicator for a `maxlength`-limited field (used by the textarea control) |
+| `afLocationInput` | component | `ext/afform/core/ang/af/fields/afLocationInput.component.js` | Proximity / location field control (address + distance + unit) bound through `ngModel` |
+| `afSearchParamSets` | component | `ext/afform/core/ang/af/afSearchParamSets.component.js` | Saves, lists, and applies named search-parameter sets within a fieldset |
 | `afMarkup` | custom element | `ext/afform/core/ang/af/afMarkup.element.js` | Renders arbitrary (token-aware) markup inside a form |
 | `afToken` | custom element | `ext/afform/core/ang/af/afToken.element.js` | Renders token content within a form |
 
 The **rendering entry points** are `afForm.component.js` and `afField.component.js`, both under `ext/afform/core/ang/af/`. `Source: ext/afform/core/ang/af/afForm.component.js` `Source: ext/afform/core/ang/af/afField.component.js` Note that `afMarkup` and `afToken` are implemented as native custom elements (each extends `HTMLElement`) rather than AngularJS directives. `Source: ext/afform/core/ang/af/afMarkup.element.js` `Source: ext/afform/core/ang/af/afToken.element.js`
+
+### `afCore` API-binding directives
+
+Three of the eleven directives belong to the lower-level `afCore` module rather than to the `af` form vocabulary. They wire a CiviCRM API call directly onto a controller scope and are used by the runtime internals rather than hand-authored in `.aff.html` markup:
+
+- **`afApi4Ctrl`** — binds an APIv4 call and its result onto a controller scope (via `afApi4` / `afApi4Refresh` / `onRefresh`), letting a template read live API data. `Source: ext/afform/core/ang/afCore/Api4Ctrl.js:L3`
+- **`afApi4Action`** — triggers an APIv4 action from an attribute-bound expression, toggling the running/idle CSS classes and emitting start / success / error status messages while the call is in flight. `Source: ext/afform/core/ang/afCore/Api4Action.js:L3`
+- **`afApi3Ctrl`** — the **`@deprecated`** APIv3 counterpart of `afApi4Ctrl`, retained only for backward compatibility. `Source: ext/afform/core/ang/afCore/Api3Ctrl.js:L2-L3`
 
 A `.aff.html` block definition is plain, declarative markup — an `af-container` wrapper holding `af-field` elements:
 

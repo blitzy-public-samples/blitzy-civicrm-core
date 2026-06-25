@@ -15,6 +15,7 @@ FormBuilder is the AngularJS editor (`afGuiEditor`) that lets administrators bui
 - [Installation (CLI, Git)](#installation-cli-git)
 - [Overview & Purpose](#overview--purpose)
 - [Component Map & Relationships](#component-map--relationships)
+- [Editor Directives](#editor-directives)
 - [The `afGui` Service](#the-afgui-service)
 - [Drag-and-Drop Editing Flow](#drag-and-drop-editing-flow)
 - [Reading & Writing `.aff.html`](#reading--writing-affhtml)
@@ -66,10 +67,24 @@ The editor is organized around a single host component, `afGuiEditor`, which is 
 | `afGuiElements` | The palette of draggable fields, blocks, and elements. `Source: ext/afform/admin/ang/afGuiEditor/afGuiElements.component.js` |
 | `afGuiMenuItemStyle` / `Background` / `Border` / `Collapsible` | Menu-item style controls for containers. `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemStyle.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemBackground.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemBorder.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiMenuItemCollapsible.component.js` |
 | `afGuiContainerMultiToggle` / `afGuiEditOptions` | Container multi-select toggle and edit-option controls. `Source: ext/afform/admin/ang/afGuiEditor/afGuiContainerMultiToggle.component.js` `Source: ext/afform/admin/ang/afGuiEditor/afGuiEditOptions.component.js` |
+| `afGuiGenericElement` | Generic handler for element types supplied by third-party extensions; renders the element's own `admin_tpl` or a generic template. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiGenericElement.js` |
+| `afGuiTokenSelect` | Token-picker addon for inserting available tokens into a text field (e.g. redirect URL, default value, label). `Source: ext/afform/admin/ang/afGuiEditor/afGuiTokenSelect.js` |
+| `autofillRelationshipBehaviorForm` | Configures the "autofill by related contact" behavior for an entity. `Source: ext/afform/admin/ang/afGuiEditor/behaviors/autofillRelationshipBehaviorForm.component.js` |
+| `afAdminListMenu` | `afAdmin`-module create/search menu on the form-list page, rendered per tab (form / search / block). `Source: ext/afform/admin/ang/afAdmin/afAdminListMenu.component.js` |
 
-In total the extension defines **23 AngularJS components** across its `ang/` tree (modules `afAdmin` and `afGuiEditor`). `Source: ext/afform/admin/ang`
+In total the extension defines **23 AngularJS components** across its `ang/` tree (modules `afAdmin` and `afGuiEditor`); the table above enumerates them all, including the four module-level / behavior components (`afGuiGenericElement`, `afGuiTokenSelect`, `autofillRelationshipBehaviorForm`, and the `afAdmin`-module `afAdminListMenu`). `Source: ext/afform/admin/ang`
 
 The components are tied together by the `afGui` service, which holds the shared form metadata and evaluates the markup-to-model bindings the components read and write. `Source: ext/afform/admin/ang/afGuiEditor.js:L6`
+
+### Editor Directives
+
+Beyond its components, the `afGuiEditor` module defines **3 directives**. `Source: ext/afform/admin/ang` These are attribute directives that decorate the editor's templates rather than standalone `af-gui-*` elements:
+
+| Directive | Role |
+|-----------|------|
+| `afGuiConditionalMenu` | Trigger/menu that opens the "Conditional Rules" dialog for a node, adding or editing its `af-if` display conditions. `Source: ext/afform/admin/ang/afGuiEditor/elements/afGuiConditionalMenu.directive.js:L2` |
+| `afGuiFieldValue` | Value-input directive (cribbed from the API4 Explorer) that renders the correct control for entering a field's value in conditions, filters, and defaults. `Source: ext/afform/admin/ang/afGuiEditor/afGuiFieldValue.directive.js:L6` |
+| `afGuiMenu` | Bridges Bootstrap dropdown `show.bs.dropdown` / `hidden.bs.dropdown` events into `$scope` (via `$scope.$apply`), lazily rendering menu contents for a large performance boost. `Source: ext/afform/admin/ang/afGuiEditor.js:L497` |
 
 ## The `afGui` Service
 
