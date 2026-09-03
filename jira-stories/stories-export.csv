@@ -287,8 +287,8 @@ observed behaviour. Revalidate the cited locators against another version or tar
 before this story is estimated as it stands. What a *particular deployment* has configured is not
 readable from source and is raised as a clarification rather than asserted. Where the same file is
 cited repeatedly, its path is given in full once in that passage and the later citations in the
-passage are line numbers alone — a citation of the form ([`:68`]) always means that line of the
-file named in full immediately before it.
+passage are line numbers alone — a bracketed citation whose path is omitted, written as `:68`,
+always means that line of the file named in full immediately before it.
 
 **The specification documents this surface, so this is an extension of a supported concept rather
 than an invention.** §7.3.4 of the ingested Technical Specification records constituent
