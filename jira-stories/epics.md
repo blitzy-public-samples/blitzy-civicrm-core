@@ -63,9 +63,23 @@ rather than a reproduced exploit. Where a fact about the *target deployment* can
 source — which extensions are enabled, which roles exist, which settings are on — the backlog
 raises a clarification instead of guessing.
 
-**Business context comes from the leadership business objective** supplied with the request. That
-document is not part of this repository and is not cited as a repository path anywhere in these
-artifacts.
+**Business context comes from the leadership business objective** supplied with the request — a
+markdown document of 4,097 bytes, recorded and rendered at §0.9.1 of the ingested Technical
+Specification. That document is not part of this repository and is not cited as a repository path
+anywhere in these artifacts: it was supplied to the request rather than committed, and the eight
+files listed in §2.1 are the whole of what this run added. **It is therefore not present in this
+checkout**, no claim made here can be resolved against it mechanically, and none is offered as
+though it could be. The business claims in §3 were read from that specification's §0.9.1 rendering
+of it — citable and auditable in the way the absent original is not — and no artifact in this set
+reproduces the original's own wording or reconstructs any part of it.
+
+Checking this backlog against the sponsor's document is therefore a **human review step, not a
+mechanical one**, and a short one. §3.1 and §3.2 enumerate every pain point and success criterion
+the backlog draws on, and the table in §3.3 names the story each one is cited by; a reviewer
+holding the original compares it against those three lists rather than against four story
+documents. Anything found misstated there points at the Business Value field of the stories §3.3
+names against it, and at nothing else — though note that each of those field values is serialized
+unchanged into both exports and the mapping file, so one correction lands in four places at once.
 
 ### 2.1 Artifact inventory
 
@@ -92,7 +106,10 @@ file, which is why this document exists as well as the exports.
 ## 3. Business context
 
 Drawn from the leadership business objective supplied with this request, which is the source of
-truth for every Business Value field in the four stories.
+truth for every Business Value field in the four stories. As §2 records, that document is not in
+this checkout: what follows was read from §0.9.1 of the ingested Technical Specification, which
+records and renders it. Every item below is therefore verifiable against that specification now,
+and against the sponsor's own copy of the objective whenever a reviewer holds it.
 
 ### 3.1 The pain today
 
