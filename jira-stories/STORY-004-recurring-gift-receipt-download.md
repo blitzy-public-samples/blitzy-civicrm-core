@@ -1,9 +1,9 @@
 # STORY-004 — Recurring-gift receipt download
 
-The fourth and final story of the Epic defined in [`epics.md`](epics.md), which also carries the
-story roster, the JIRA import reconciliation and the consolidated clarification summary. This
-document carries the nine mandated story fields and nothing else — there is no Epic field among
-them, by design.
+The fourth and final story of the Epic defined in [`epics.md`](epics.md). The nine mandated
+fields follow under their own headings, and no Epic field appears among them; Epic-level content —
+the story roster, the JIRA import reconciliation and the consolidated clarification summary —
+stays in `epics.md`.
 
 This story adds **one verb** to a contract it does not own. Ownership, scoping and eligibility are
 enforced exactly as
@@ -46,6 +46,12 @@ download path holding a second copy of the rule is a path that can silently drif
 it is supposed to mirror, and the failure that produces is a donor obtaining as a file something
 they are not permitted to see on screen.
 
+**Two of the inherited properties are named explicitly, because a delivery path is where they are
+easiest to lose.** The identifier is canonicalized before it is used — exactly one scalar,
+in-range positive integer, with every other form refused under that same non-disclosing contract
+and before any query is issued. And the bytes delivered are produced from the record state that
+authorized the request, not from a later read by identifier alone.
+
 **Where the delivered format is a PDF**, rendering runs through
 `CRM_Utils_PDF_Utils::html2pdf()`, whose engine is chosen by configuration — WeasyPrint, then
 wkhtmltopdf, then bundled dompdf. So this story carries the **host prerequisite** that the first
@@ -83,27 +89,28 @@ STORY-002 and STORY-003 — which is why those three carry High and this one doe
 
 ## Acceptance Criteria
 
-[ ] Given a donor viewing a receipt they own, when they request a download, then a file is returned whose content corresponds to the receipt displayed.
+[ ] Given a donor viewing a receipt they own, when they request a download, then a file is returned whose content corresponds to the receipt displayed and is rendered from the record state that authorized the request — the authorized row carried into rendering, or a final read that re-applies every predicate immediately before the file is produced — and not from a later read by identifier alone.
 
-[ ] Given an identifier the donor does not own, or one failing any scoping or eligibility predicate, when a download is requested for it, then the same non-disclosing refusal contract that STORY-003 defines applies, verified against the identical case list — an identifier that does not exist, one the donor does not own, one whose recurring link is null, one flagged as test-mode, one dated in the future, and one outside the eligible-status set — with all six producing one identical response.
+[ ] Given an identifier the donor does not own, or one failing any scoping or eligibility predicate, or one that is not exactly one canonical in-range positive integer, when a download is requested for it, then the same non-disclosing refusal contract that STORY-003 defines applies, verified against the identical case list — an identifier that does not exist, one the donor does not own, one whose recurring link is null, one flagged as test-mode, one dated in the future, one outside the eligible-status set, and the malformed forms of the identifier itself: absent, empty, supplied more than once, array-encoded, non-numeric, zero, negative, leading-zero, or beyond the range of the contribution identifier column — with every one of them producing one identical response, and the malformed forms refused before any query is issued.
 
 [ ] Given a contribution with no recorded `receipt_date`, when a download is requested, then the behaviour defined for the viewing path applies and no empty or malformed file is returned.
 
-[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is exercised beyond what `CLR-10` authorises for the chosen route.
+[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule, exactly as the viewing path requires.
 
 [ ] Given the donor-facing display, when its configuration is reviewed, then `actions` remains false and the download affordance is a row-level link, so no bulk task and no result-set export is reachable by a donor role.
+
+[ ] Given the same receipt is downloaded repeatedly by the donor who owns it, then the number of stored files and activity records created does not grow with the number of requests; and given a download request forged from another site on that donor's session, then it creates no stored file and no activity record — whether because the download GET is side-effect-free or because the persisting transition requires a request-integrity token the forged request cannot supply.
 
 ---
 
 ## Technical Notes
 
-Every claim below is a **reading of source at the stated address**, obtained by static inspection
-of this checkout. No runtime was stood up for this run — no CiviCRM instance was installed, no
-request was issued, no file was rendered and no data was retrieved — so nothing here rests on
-observed behaviour, and any statement about what a *particular deployment* has configured or
-installed is raised as a clarification rather than asserted. The baseline is CiviCRM `6.17.alpha1`
-([`xml/version.xml`:3]); a different target version must be re-checked against these addresses
-before the story is estimated as it stands.
+**Source basis.** Every claim below about the existing system is a **static reading of source at
+the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
+observed behaviour, and no receipt was rendered to confirm any of it. Revalidate the cited
+locators against another version or target deployment before this story is estimated as it
+stands. What a *particular deployment* has configured or installed is not readable from source and
+is raised as a clarification rather than asserted.
 
 **Enforcement is the viewing path's, referenced and not restated.** All four of STORY-001's
 predicates — 1 through 4, in the numbering that contract publishes — plus whichever status set
@@ -111,6 +118,40 @@ predicates — 1 through 4, in the numbering that contract publishes — plus wh
 cannot widen. The definitions live in STORY-001 and STORY-003 and are deliberately not reproduced
 here: a single normative statement is what makes the two receipt paths verifiably the same, and
 restating it would create exactly the second copy whose divergence criterion 2 exists to catch.
+
+**Two of those inherited properties are named here, because a file-delivery path is where they go
+missing.** The **identifier is canonicalized before use** — exactly one scalar value, matching
+`^[1-9][0-9]*$` and within the range of `civicrm_contribution.id`, with an absent, empty,
+repeated, array-encoded, non-numeric, zero, negative, leading-zero or out-of-range form refused
+under the same response as the six semantic cases and before any query is issued. STORY-003
+records why type validation is not canonicalization, with the addresses; this path inherits the
+rule rather than re-deriving it. And **the delivered bytes come from the authorized record
+state**: either the authorized row is carried into rendering, or every predicate is re-applied in
+the same read that produces the file, immediately before it is written or streamed. The existing
+renderer is the illustration of the failure — it re-reads the row by bare identifier
+([`CRM/Contribute/Form/Task/Invoice.php`:299-301]) and derives each row's contact from a second
+unchecked read keyed on the contribution alone
+([`CRM/Contribute/Form/Task/Invoice.php`:551-557]) — and a download is the worse place for it,
+because divergent bytes leave the server as a file the donor keeps and can forward. Criteria 1
+and 2 assert both properties.
+
+**The file-delivery boundary is inherited with the rest of it, and it earns a sentence of its own
+because a download is where it would be quietly dropped.** Where what is delivered is a **stored
+File** rather than freshly rendered bytes — the possibility `CLR-09` leaves open, since the staff
+path attaches its PDF to an Activity ([`CRM/Contribute/Form/Task/Invoice.php`:639-644],
+[`:649`]) — STORY-003's three requirements apply here without modification: the donor role holds
+no `access uploaded files`; the File is resolved server-side from a contribution **this** path has
+already authorized, never from a file identifier the caller supplies; and the bytes are streamed
+by this path under its own permission gate. A donor is therefore never redirected or linked to a
+raw `civicrm/file` URL and is never handed a file token to hold. That route is gated on
+`access uploaded files` alone ([`CRM/Core/xml/Menu/Misc.xml`:61-66], the access argument at
+[`CRM/Core/xml/Menu/Misc.xml`:64]) and streams against a file identifier and a token that bind
+neither an actor nor a contribution ([`CRM/Core/Page/File.php`:22-118], the token test at
+[`CRM/Core/Page/File.php`:42]; the token payload at [`CRM/Core/BAO/File.php`:833-834] and its
+validation at [`CRM/Core/BAO/File.php`:849]), so a receipt reached through it would arrive having
+passed none of the predicates this story has just inherited. Both of the first two criteria are
+statements about **this** path's output — the content it returns, and the single response it gives
+to every refusal case — and neither is satisfied by a URL that leaves it.
 
 **The existing donor route is both the precedent and the warning.** That route,
 `civicrm/contribute/invoice`, is documented in STORY-003 — its declaration, its access callback and
@@ -126,13 +167,28 @@ delegates to `CRM_Utils_Mail::appendPDF`) and records an **Activity** through `a
 ([`:619`], the `Activity.create` call itself at [`:649`]). A donor download on that route is
 therefore not side-effect-free today.
 
-**Whether those side effects are acceptable for a donor read is `CLR-10`, and `CLR-10` is owned by
-STORY-003.** Criterion 4 defers to it rather than pre-empting it, which is precisely why that
-criterion is worded "beyond what `CLR-10` authorises for the chosen route" instead of the flatter
-and more tempting "no file is written". This story asserts only the narrower promise it can keep
-regardless of how `CLR-10` is answered: that **no column of the contribution record is written**.
+**Whether those side effects are kept is `CLR-10`, and `CLR-10` is owned by STORY-003.**
+Criterion 4 defers that choice rather than pre-empting it, which is why it is worded around the
+route "chosen under `CLR-10`" instead of the flatter and more tempting "no file is written".
 Deciding the route's persistence behaviour here — in the story that merely consumes the route —
-would settle a question belonging to the story that chooses it.
+would settle a question belonging to the story that chooses it. The promise this story keeps
+regardless of the answer is that **no column of the contribution record is written**.
+
+**Deferring the decision does not defer the controls.** `CLR-10` decides whether those writes are
+kept; it cannot make an unprotected state-changing `GET` acceptable, so this path holds the same
+invariant the viewing path does. Either the download `GET` is **side-effect-free**, or the
+persistence is reached through a **request-integrity-checked, non-`GET` transition**, idempotent
+per contribution rather than per request, under a **stated retention and cleanup rule**. The
+existing route satisfies none of that today: it renders, writes the file and creates the Activity
+on every request ([`CRM/Contribute/Form/Task/Invoice.php`:512], [`:514`], [`:515`]), attaching the
+rendered PDF to that Activity ([`:639-645`], created at [`:649`]), from a link that carries no key
+or token ([`templates/CRM/Contribute/Page/UserDashboard.tpl`:48],
+[`templates/CRM/Contribute/Page/UserDashboard.tpl`:50-51]) on a route declared `page_type` 1
+([`CRM/Contribute/xml/Menu/Contribute.xml`:304]), where core's route-level key check covers
+`page_type` 3 only ([`CRM/Core/Permission.php`:573-578], the validation at
+[`CRM/Core/Permission.php`:575]). Criteria 4 and 6 assert the invariant and are evaluable under
+either answer. It constrains the mechanics of the write, not the affordance: the row-level link
+stays a link, and criterion 5 continues to hold.
 
 **PDF rendering: the engine is a configuration choice.** Where the delivered format is a PDF,
 rendering runs through `CRM_Utils_PDF_Utils::html2pdf()` ([`CRM/Utils/PDF/Utils.php`:36]), which
@@ -154,11 +210,84 @@ It is resolved by provisioning the host, never by adding a package — and confl
 error this note exists to prevent, because the wrappers being in the lock makes the capability
 *look* self-contained when it is not.
 
-`CLR-12` therefore has a testable hook rather than needing a manual trawl through settings: the
-public helper `getPdfEngine()` ([`CRM/Utils/PDF/Utils.php`:131-141]) reports which of the three the
-current configuration selects, by the same three-way test the renderer itself applies. Asking it
-which engine is live, and then confirming that engine's binary is present, is the whole of the
-target-instance half of that question.
+`CLR-12` has a testable hook rather than needing a manual trawl through settings: the public helper
+`getPdfEngine()` ([`CRM/Utils/PDF/Utils.php`:131-141]) reports which of the three the current
+configuration selects, by the same three-way test the renderer itself applies
+([`CRM/Utils/PDF/Utils.php`:120-128]). **Naming the live engine is where the readiness check begins,
+not where it ends.** Presence of the executable is the preliminary prerequisite, and the only part
+of readiness the platform establishes for itself: both executable-path settings validate through
+`CRM_Core_BAO_Setting::validateExecutable` ([`settings/Core.setting.php`:629] and [`:651`]), which
+tests `file_exists` and `is_executable` on the first space-separated token of the value and nothing
+beyond it ([`CRM/Core/BAO/Setting.php`:338-354], the split at [`:345`], the two tests at [`:347`]
+and [`:350`]). The four conditions below belong to this story, each to be established on the target
+instance and recorded against `CLR-12` before the download path is accepted.
+
+**1 — The wrapper must support the PHP the target runs.** The locked WeasyPrint wrapper declares its
+support as an *enumerated list of minor versions*, `7.4.* || 8.0.* || 8.1.* || 8.2.* || 8.3.*`
+([`composer.lock`:3500-3504], the constraint at [`:3501`]), while core's own requirement is the
+open-ended `^8.1.2` ([`composer.json`:50]). A deployment on PHP 8.4 or later consequently satisfies
+core while falling outside that wrapper's declared range, and the divergence does not surface when
+dependencies are installed, because resolution runs against the platform pinned at `php 8.1.2`
+([`composer.json`:39-42]) rather than against the host interpreter. The comparison is per wrapper
+rather than blanket: `knplabs/knp-snappy` requires `php >=8.1` ([`composer.lock`:1304-1308], at
+[`:1305`]) and `dompdf/dompdf` requires `^7.1 || ^8.0` ([`composer.lock`:694-701], at [`:700`]),
+both open-ended within 8.x. What must be checked is therefore a version *pair* — the selected
+engine's wrapper against the deployed interpreter — and an unverified pair is a download that can
+fail on a request valid in every other respect.
+
+**2 — The configured executable must still be maintained.** CiviCRM's own settings say which is
+which: the wkhtmltopdf setting describes it as "a now-discontinued utility"
+([`settings/Core.setting.php`:656]) and the weasyprint setting as "a successor to the discontinued
+wkhtmltopdf" ([`:636`]). Because `validateExecutable` tests presence and never version, a
+discontinued or unpatched binary passes settings validation silently. The upstream position, which
+is published project status rather than a locator in this repository: the wkhtmltopdf repository was
+archived read-only in January 2023 with 0.12.6 (June 2020) as its final release, its GitHub
+organisation was marked archived in July 2024, a critical server-side request-forgery advisory
+(CVE-2022-35583) is publicly tracked against that release with no upstream fix available, and
+upstream's own guidance is not to run it over HTML that is not fully trusted. An instance found
+configured for wkhtmltopdf is accordingly a decision to record deliberately, with condition 3
+applied as a compensating control, rather than a default to inherit.
+
+**3 — The remote and local resource policy must be stated, because the default fetches.** Receipt
+content is HTML assembled from message templates a staff user can edit, so what reaches the
+renderer may carry `src` or `url()` references. On the bundled dompdf fallback, remote fetching is
+enabled unless someone disables it: `dompdf_enable_remote` defaults to `TRUE`
+([`settings/Core.setting.php`:591-604], the default at [`:601`], its own help text at [`:598`]
+observing it may be turned off "for security reasons"), and the renderer falls back to `TRUE`
+again when the setting is unset ([`CRM/Utils/PDF/Utils.php`:296-300], the `?? TRUE` at [`:300`]).
+One remote reference in a template is then enough to make the CiviCRM host issue an outbound
+request to an address the template author chose, while rendering a donor's receipt on a
+donor-reachable route — server-side request forgery (CWE-918). Local references start from the
+opposite default and need the opposite handling. CiviCRM builds dompdf's options object and
+*overrides* `chroot` only when a `dompdf_chroot` setting exists
+([`CRM/Utils/PDF/Utils.php`:296-308], the conditional override at [`:302-308`]); with no override,
+dompdf keeps its own package-folder default, which that setting's help text records — local image
+loading is restricted to the DOMPDF folder itself, for security, and its subfolders
+([`settings/Core.setting.php`:572-590], the help text at [`:579`]). So the unset state is
+restrictive rather than open, and the risk runs the other way: a chroot widened to accommodate
+receipt assets is a chroot that must be widened to *exactly* those assets and no further. Both
+halves need an explicit answer — which addresses a receipt render may fetch, and which local paths
+it may read — with fetch-nothing as the posture a deployment must consciously depart from: remote
+loading off, and assets either inlined or served from a chroot admitting only the local receipt
+assets the chosen receipt shape actually needs.
+
+**4 — Failure must be generic, complete-or-nothing, and free of host detail.** All three engines
+produce the whole document before a byte leaves the process: dompdf renders and only then streams
+([`CRM/Utils/PDF/Utils.php`:157] and [`:173`]), and each wrapper obtains its complete output before
+any header is set ([`:184`] then [`:189-191`] for WeasyPrint, [`:212`] then [`:217-219`] for
+wkhtmltopdf). A rendering failure is therefore raised before output begins, and a donor has no
+legitimate reason ever to receive a truncated file. This path must turn any such failure into the
+same generic refusal the viewing path uses, emit no partial and no zero-length attachment, and
+disclose no engine diagnostic and no host path. That last prohibition has a specific source: both
+wrappers are constructed with the configured executable path ([`CRM/Utils/PDF/Utils.php`:182] and
+[`:204`]) and those settings hold absolute host filesystem paths
+([`settings/Core.setting.php`:623-662]), so any message echoing the invocation carries one. Naming
+the path is appropriate where core itself does it, on the staff settings form
+([`CRM/Core/BAO/Setting.php`:348] and [`:351`]), and is precisely what a donor must not see.
+dompdf's debugging output belongs in its configured log file
+([`settings/Core.setting.php`:605-621]), never in a response. Criterion 3 tests the
+no-empty-and-no-malformed-file half of this, and criterion 1's requirement that delivered content
+correspond to the receipt displayed is what a partial file would breach.
 
 **SearchKit's own download action is not the mechanism.** It streams a *result-set* export and
 refuses outright any display whose `actions` setting is off, answering with `permissionDenied()`
@@ -177,10 +306,10 @@ row ([`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:575-
 call at [`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:584]).
 
 **That negative claim is bounded by enumeration rather than asserted.** Within `ext/search_kit`
-the setting is read at five **server-side PHP** addresses, and none of the five is on the link
-path:
+the setting appears at five **server-side PHP** addresses — one default assignment and four reads
+— and none of the five is on the link path:
 
-1. it is set to `TRUE` for a table display
+1. it is **assigned** `TRUE` for a table display
    ([`ext/search_kit/Civi/Api4/Event/Subscriber/DefaultDisplaySubscriber.php`:154]);
 2. it gates which bulk tasks are enabled
    ([`ext/search_kit/Civi/Api4/Event/Subscriber/SearchDisplayTasksSubscriber.php`:48-59], the read
@@ -191,8 +320,9 @@ path:
 5. it triggers adding a primary-key field for non-DAO entities
    ([`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:1557]).
 
-**Those five are the server-side reads, and they are not the whole extension.** The same setting
-is read on the client, in `ext/search_kit/ang`: it gates the bulk-task menu
+**Those five server-side references — one assignment and four reads — are not the whole
+extension.** The same setting is read on the client, in `ext/search_kit/ang`: it gates the
+bulk-task menu
 ([`ext/search_kit/ang/crmSearchDisplayTable/crmSearchDisplayTable.html`:5]) and the row-select
 checkbox that feeds it
 ([`ext/search_kit/ang/crmSearchDisplayTable/crmSearchDisplayTableBody.html`:6], with the
@@ -209,7 +339,7 @@ row-select checkbox are conditional on the setting, the header class resolves to
 admin component is a staff configuration screen rather than a donor surface. Two bounds on this
 account, stated rather than implied: no claim is made about the setting's effect outside that
 extension, and no claim is made that the server-side list and the client reads named here
-together exhaust every read within it.
+together exhaust every reference within it.
 
 **A table display defaults `actions` to `TRUE`**
 ([`ext/search_kit/Civi/Api4/Event/Subscriber/DefaultDisplaySubscriber.php`:152-165], the assignment

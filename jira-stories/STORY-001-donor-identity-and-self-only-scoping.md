@@ -1,9 +1,9 @@
 # STORY-001 — Donor identity resolution and the self-only access contract
 
-The first story of the Epic defined in [`epics.md`](epics.md), which also carries the story
-roster, the JIRA import reconciliation and the consolidated clarification summary. This document
-carries the nine mandated story fields and nothing else — there is no Epic field among them, by
-design.
+The first story of the Epic defined in [`epics.md`](epics.md). The nine mandated fields follow
+under their own headings, and no Epic field appears among them; Epic-level content — the story
+roster, the JIRA import reconciliation and the consolidated clarification summary — stays in
+`epics.md`.
 
 ---
 
@@ -32,10 +32,17 @@ Three deliverables:
    session on the server. No request parameter, query string, header, cookie or form field may
    supply, override or influence it — a request that offers one is answered as though it had not.
 2. **Identify in the target deployment, or create, a least-privileged donor role.** The role must
-   grant portal access without conferring visibility or edit rights over other contacts.
-   `view my invoices` is the purpose-built candidate permission; the role must not carry
-   `view all contacts`, `edit all contacts` or `access CiviContribute`. Which of "identify" and
-   "create" applies cannot be read from source and is `CLR-02`.
+   grant portal access without conferring visibility or edit rights over other contacts, and
+   without conferring access to stored files. `view my invoices` is the purpose-built candidate
+   permission; the role must not carry `view all contacts`, `edit all contacts`,
+   `access CiviContribute` or `access uploaded files`. The fourth of those belongs on the list for
+   the same reason as the other three, and it is the one most easily overlooked: it is the
+   permission that gates core's own file route, which authorizes a file request against a file
+   identifier and a token without reference to the contribution or the contact the file belongs to
+   (addresses in Technical Notes). A donor holding it would have a second way to reach a stored
+   receipt document, outside the ownership boundary this contract establishes — so the receipt
+   stories deliver every stored receipt file through their own authorized path instead. Which of
+   "identify" and "create" applies cannot be read from source and is `CLR-02`.
 3. **Publish the scoping rule as one normative definition** — the four predicates in the table
    below. They are stated once, here. STORY-002 and STORY-003 each *implement* them and neither
    restates them, so a change to the rule cannot leave one path behind.
@@ -93,9 +100,9 @@ layer behind it.
 
 [ ] Given two authenticated sessions for different contacts, when each resolves the acting donor, then each receives only its own contact identifier.
 
-[ ] Given an unauthenticated request to any donor portal route, when it is handled, then it is refused or redirected to authentication and no contribution data appears in the response.
+[ ] Given a request to any donor portal route carrying either no authenticated session at all or an authenticated account that resolves to no linked CiviCRM contact, when it is handled, then it is refused before any contribution or search-display query is issued — an unauthenticated caller may instead be redirected to authentication — no contact identifier is taken from the request as a fallback, the response discloses no internal error or identity-resolution detail, and no contribution data appears in the response.
 
-[ ] Given the role assigned to donors on the target instance, when its granted permissions are enumerated, then it holds no permission conferring visibility or edit rights over other contacts, and specifically not `view all contacts`, `edit all contacts` or `access CiviContribute`.
+[ ] Given the role assigned to donors on the target instance, when its granted permissions are enumerated, then it holds no permission conferring visibility or edit rights over other contacts and no permission conferring access to stored files, and specifically not `view all contacts`, `edit all contacts`, `access CiviContribute` or `access uploaded files`.
 
 [ ] Given the scoping contract, when the dependent stories are reviewed, then all four predicates are stated once in this story and referenced rather than redefined by STORY-002 and STORY-003, so a change to the rule cannot leave one path behind.
 
@@ -103,12 +110,11 @@ layer behind it.
 
 ## Technical Notes
 
-Every claim below is a **reading of source at the stated address**, obtained by static inspection
-of this checkout. No runtime was stood up for this run, so nothing here rests on observed
-behaviour, and any statement about what a *particular deployment* has configured is raised as a
-clarification rather than asserted. The baseline is CiviCRM `6.17.alpha1`
-([`xml/version.xml`:3]); a different target version must be re-checked against these addresses
-before the story is estimated as it stands.
+**Source basis.** Every claim below about the existing system is a **static reading of source at
+the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
+observed behaviour. Revalidate the cited locators against another version or target deployment
+before this story is estimated as it stands. What a *particular deployment* has configured is not
+readable from source and is raised as a clarification rather than asserted.
 
 **Where the tenant boundary is actually computed — and therefore the path this story tests.** The
 `user_contact_id` token that the dependent predicates use is resolved on the **input** side of
@@ -133,9 +139,33 @@ through to a bare `NULL` return ([`api/v3/utils.php`:2204]). A `NULL` is then di
 caller's null-coalesce, leaving the original unresolved operand in place
 ([`Civi/Api4/Utils/FormattingUtil.php`:126]). The consequence is a requirement rather than a
 footnote: the portal establishes an authenticated session and **refuses the request itself** when
-the session yields no contact identifier, rather than relying on resolution to raise — which is
-what the fourth acceptance criterion verifies. This account is bounded to the addresses named
-here, and no claim is made about how other callers of either function treat a `NULL`.
+the session yields no contact identifier, rather than relying on resolution to raise.
+
+The fourth acceptance criterion verifies that requirement, and it deliberately spans **two**
+cases rather than one. The first is a request carrying no authenticated session at all. The second
+is the case this paragraph is actually about — **an account that authenticates successfully and
+still resolves to no linked contact** — which is the outcome the `NULL` return above produces and
+the one a portal is most likely to leave untested, because it looks like a logged-in user. That
+outcome is structural rather than exotic: `CRM_Core_Session::getLoggedInContactID()` returns a
+contact identifier only when the session's `userID` key holds a numeric value, and `NULL`
+otherwise ([`CRM/Core/Session.php`:572-575]), so a framework-authenticated account whose session
+carries no contact identifier resolves to nothing at all. Where a CMS user framework supplies the
+mapping it is `CRM_Core_BAO_UFMatch::getContactId()`, which returns `NULL` both for a falsy input
+identifier and, after the domain-scoped lookup finds no row, for a user with no match at all
+([`CRM/Core/BAO/UFMatch.php`:441-462], the input guard at [`CRM/Core/BAO/UFMatch.php`:442-444],
+the lookup at [`CRM/Core/BAO/UFMatch.php`:454-457] and the no-match return at
+[`CRM/Core/BAO/UFMatch.php`:462]). Which framework applies on the target instance is `CLR-01`, so
+the criterion is written against the outcome — no linked contact — rather than against one
+framework's mapping table.
+
+Three things are required of that refusal in both of its cases, and the criterion asserts all
+three. It happens **before** any contribution or search-display query is issued, because a query
+is the wrong place to discover that there is no identity to scope it by. It takes no contact
+identifier from the request as a fallback, which would substitute a caller-chosen identity for the
+missing session-derived one and defeat the first three criteria in exactly the case they assume
+away. And it discloses no internal error or resolution detail, so the response tells a caller
+nothing about why identity resolution failed. This account is bounded to the addresses named here,
+and no claim is made about how other callers of either function treat a `NULL`.
 
 **Why `access Contact Dashboard` is not sufficient, and what the least-privilege candidate is.**
 The dashboard permission's own description reads "View Contact Dashboard (for themselves and
@@ -144,6 +174,35 @@ does not establish self-only access and it cannot be the mechanism that enforces
 boundary. `view my invoices` is donor-scoped by design, described as "Allow users to view/
 download their own invoices" ([`CRM/Core/Permission.php`:958-961]), which makes it the
 least-privilege candidate for the receipt capability the later stories deliver.
+
+**Why `access uploaded files` is forbidden alongside the contact and contribution permissions.**
+It is not an arbitrary addition to the list: it is the permission that gates core's file route,
+and that route authorizes a file request without ever consulting the contribution the file belongs
+to. `civicrm/file` declares `access uploaded files` as its whole access argument and dispatches to
+`CRM_Core_Page_File` ([`CRM/Core/xml/Menu/Misc.xml`:61-66], the path at
+[`CRM/Core/xml/Menu/Misc.xml`:62], the access argument at [`CRM/Core/xml/Menu/Misc.xml`:64] and
+the page callback at [`CRM/Core/xml/Menu/Misc.xml`:65]); the permission's own description is
+"View / download files including images and photos" ([`CRM/Core/Permission.php`:757-760], the
+description at [`CRM/Core/Permission.php`:759]), and the same permission is the API default for
+the `file`, `files_by_entity` and `entity_file` entities ([`CRM/Core/Permission.php`:1364-1372],
+the entity entry at [`CRM/Core/Permission.php`:1365-1370] and the two aliases at
+[`CRM/Core/Permission.php`:1371-1372]). That page takes a file identifier with a token, or a bare
+filename, and streams the file ([`CRM/Core/Page/File.php`:22-118], the identifier at
+[`CRM/Core/Page/File.php`:34], the token at [`CRM/Core/Page/File.php`:41], the token test at
+[`CRM/Core/Page/File.php`:42], the filename branch at [`CRM/Core/Page/File.php`:49-53] and the
+streamed response at [`CRM/Core/Page/File.php`:109-116]).
+
+**This claim is bounded to that one class**, and within that bound it is exhaustive: the string
+`contribution` does not occur anywhere in it ([`CRM/Core/Page/File.php`]), and the entity
+identifier the request does carry ([`CRM/Core/Page/File.php`:30]) is consulted only by the
+deletion branch ([`CRM/Core/Page/File.php`:93-94]), never by the branch that streams. No claim is
+made about authorization performed elsewhere by other callers of that route. The consequence that
+matters to this contract is narrow and sufficient: the stored receipt documents STORY-003 and
+STORY-004 deal with are File records, so a donor role holding this permission would have a way to
+reach one that is blind to ownership, while every predicate in the contract above binds only the
+routes this Epic introduces. Hence the fifth acceptance criterion forbids the permission, and
+hence both receipt stories require a stored receipt file to be resolved and streamed by their own
+authorized path.
 
 **No donor-appropriate role is seeded by default.** The Standalone identity extension's
 post-install routine ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:45]) seeds exactly

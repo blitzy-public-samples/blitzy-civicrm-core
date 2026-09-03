@@ -1,9 +1,9 @@
 # STORY-003 — Recurring-gift receipt viewing
 
-The third story of the Epic defined in [`epics.md`](epics.md), which also carries the story
-roster, the JIRA import reconciliation and the consolidated clarification summary. This document
-carries the nine mandated story fields and nothing else — there is no Epic field among them, by
-design.
+The third story of the Epic defined in [`epics.md`](epics.md). The nine mandated fields follow
+under their own headings, and no Epic field appears among them; Epic-level content — the story
+roster, the JIRA import reconciliation and the consolidated clarification summary — stays in
+`epics.md`.
 
 This story **implements** the four-predicate scoping contract published once in
 [`STORY-001-donor-identity-and-self-only-scoping.md`](STORY-001-donor-identity-and-self-only-scoping.md);
@@ -35,9 +35,20 @@ row-level link on the STORY-002 list.
 **The read.** A purpose-scoped server-side path gates on the donor role's permission, then issues
 an APIv4 `Contribution.get` with `checkPermissions` set false and **all four of STORY-001's
 predicates appended by the server**. The caller supplies a contribution identifier and nothing
-that can widen the query. This mirrors the list path deliberately, so that the record-level
+that can widen the query, and that identifier is **canonicalized before it is used**: exactly one
+scalar, in-range positive integer reaches the query, and every other form of it is refused
+without a query being issued. This mirrors the list path deliberately, so that the record-level
 boundary lives in one kind of place on both donor surfaces rather than in two different
 mechanisms a reviewer has to compare.
+
+**Authorization and rendering must read the same record state.** The scoped read above decides
+whether the request is allowed; the bytes the donor receives must come from **that** state — either
+by carrying the authorized row into rendering, or by re-applying every predicate in the same read
+that produces the output, immediately before it is produced. A renderer that re-reads the record by
+bare identifier after the check has issued a second, unguarded query: the row it returns is not the
+row that was authorized, and in between the record can be reassigned to another contact, have its
+recurring link nulled, be flagged test-mode, be re-dated or move outside the eligible-status set.
+The path must be built so that divergence cannot arise, whichever route `CLR-10` selects.
 
 **That design is forced rather than preferred**, and the distinction matters: a reader who takes
 it for a preference will reasonably propose the safer-*looking* alternative of leaving permission
@@ -91,29 +102,30 @@ story that closes the Epic's "and nothing else's" boundary on single-record acce
 
 [ ] Given a donor viewing their history list, when they select one of their own eligible recurring-gift contributions, then the receipt content for that contribution is displayed.
 
-[ ] Given a contribution identifier belonging to another donor, when it is requested directly with any combination of request parameters, then the response is indistinguishable from the response for an identifier that does not exist, disclosing nothing about whether the record exists.
+[ ] Given a contribution identifier belonging to another donor, when it is requested directly with any combination of request parameters — including a request that pairs it with the donor's own contact identifier, which is the pairing the existing core route accepts, and a request that supplies the contribution identifier twice or as an array — then the response is indistinguishable from the response for an identifier that does not exist, disclosing nothing about whether the record exists.
 
-[ ] Given a contribution identifier that fails any scoping predicate — one-time, test-mode, or future-dated — when it is requested directly, then it is refused under that same non-disclosing contract.
+[ ] Given a contribution identifier that fails any scoping predicate — one-time, test-mode, or future-dated — or an identifier that is not exactly one canonical in-range positive integer, which covers an absent value, an empty value, the same parameter supplied more than once, an array encoding, a non-numeric value, zero, a negative value, a leading-zero form and a digit string beyond the range of the contribution identifier column — when it is requested directly, then it is refused under that same non-disclosing contract, and the malformed forms are refused before any query is issued.
 
 [ ] Given a contribution outside the eligible-status set configured for donors, when it is requested, then it is refused under the same non-disclosing contract; and given an eligible Refunded or Cancelled contribution, the credit-note variant is rendered rather than a plain receipt.
 
-[ ] Given a receipt is displayed, then no column of the contribution record is written, verified by comparing the record before and after the request, and no new logging or audit capability is exercised beyond what `CLR-10` authorises for the chosen route.
+[ ] Given a receipt is displayed, then no column of the contribution record is written, verified by comparing the record before and after the request, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule — so a receipt GET, including one issued from another site on the donor's session, creates nothing, and repeated requests for the same receipt do not accumulate stored files or activity records.
 
 [ ] Given a contribution with no recorded `receipt_date`, when the donor opens it, then a defined state is shown rather than an error or a blank document, `receipt_date` is not written, and nothing is presented as the receipt originally issued unless it is verifiably that artifact.
 
 [ ] Given a receipt is displayed, then its content is consistent with the contribution's recorded amount and receive date.
 
+[ ] Given a contribution that satisfies every predicate when the request is authorized and then stops satisfying one of them before the receipt is produced — its contact reassigned, its recurring link nulled, its test flag set, its receive date moved into the future or its status moved outside the eligible set — when the response is produced, then no receipt content for that contribution is emitted and the request is refused under the non-disclosing contract, so that the state which authorized the request is the state the output is rendered from.
+
 ---
 
 ## Technical Notes
 
-Every claim below is a **reading of source at the stated address**, obtained by static inspection
-of this checkout. No runtime was stood up for this run — no CiviCRM instance was installed, no
-request was issued and no data was retrieved — so nothing here rests on observed behaviour, and
-any statement about what a *particular deployment* has configured is raised as a clarification
-rather than asserted. The baseline is CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]); a different
-target version must be re-checked against these addresses before the story is estimated as it
-stands.
+**Source basis.** Every claim below about the existing system is a **static reading of source at
+the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
+observed behaviour, and in particular not of behaviour reproduced against a running instance.
+Revalidate the cited locators against another version or target deployment before this story is
+estimated as it stands. What a *particular deployment* has configured is not readable from source
+and is raised as a clarification rather than asserted.
 
 **Why the read mechanism is forced, not chosen.** Leaving permission checks **on** looks like the
 safer option, and it is not available. Core's
@@ -165,11 +177,39 @@ would let a caller who varies the identifier map the contribution table by respo
 so the refusal must not vary, must not vary in timing detail a caller can read, and must not
 distinguish "not yours" from "not there".
 
-This matters more here than it usually would, because **the route already in the codebase fails
-exactly this way**: its access check validates the caller's `cid` and never the requested
-contribution's ownership, as set out next. The contract is stated once here and asserted by
-criteria 2, 3 and 4 above; STORY-004 asserts the same contract against the identical six-case
-list, which is what keeps the viewing and download paths from diverging.
+**A seventh class joins those six, and it is refused before any of them is evaluated: an
+identifier that is not exactly one canonical positive integer.** The path reduces the request to
+one scalar identifier — present exactly once, matching `^[1-9][0-9]*$`, and within the range of
+`civicrm_contribution.id` — and answers every other form with that same single response: an absent
+or empty value, the same parameter supplied twice, an array encoding such as `id[]=1&id[]=2`, a
+non-numeric value, `0`, a negative value, a leading-zero form, and a digit string larger than the
+column can hold.
+
+**Type validation is not canonicalization**, and the existing route is the demonstration rather
+than the model. `getPrintPDF` retrieves `id` as type `Positive` with aborting switched **off**
+([`CRM/Contribute/Form/Task/Invoice.php`:672]), which resolves through
+[`CRM/Utils/Request.php`:72] — the value taken from the request unmodified, array or scalar
+([`CRM/Utils/Request.php`:128-131]), then handed to the type check
+([`CRM/Utils/Request.php`:90]) — into the `Positive` branch
+([`CRM/Utils/Type.php`:404-408]), whose whole test is `CRM_Utils_Rule::positiveInteger()`
+([`CRM/Utils/Rule.php`:431-442]). That predicate accepts any non-negative integer and otherwise
+matches `/^\d+$/` ([`CRM/Utils/Rule.php`:442]), so `0`, a leading-zero form and a digit string
+beyond the column's range all pass and are then cast with `(int)`
+([`CRM/Utils/Type.php`:406]); and anything it rejects returns NULL rather than a refusal, because
+aborting is off ([`CRM/Utils/Type.php`:477]), after which the caller proceeds with that NULL into
+the renderer ([`CRM/Contribute/Form/Task/Invoice.php`:673], [`:676`]). Two requirements follow.
+The canonicalization step belongs to this path and cannot be inherited from that helper. And its
+refusals must be **indistinguishable** from the six semantic ones: a separate error for a
+malformed identifier is an oracle for the shape of the identifier space, and a framework-generated
+message — a type-validation exception rendered to the donor, for instance — would disclose
+internals on top of that.
+
+The whole contract matters more here than it usually would, because **the route already in the
+codebase fails its ownership case exactly this way**: its access check validates the caller's
+`cid` and never the requested contribution's ownership, as set out next. The contract is stated
+once here and asserted by criteria 2, 3 and 4 above; STORY-004 asserts the same contract against
+the identical case list — the six semantic cases and the malformed-identifier class — which is
+what keeps the viewing and download paths from diverging.
 
 **The existing donor-reachable route, and its ownership gap.** This is not greenfield work. Core
 declares `civicrm/contribute/invoice`, dispatching to
@@ -191,10 +231,10 @@ rather than a design choice: it states that the permission holds where "the invo
 current user" ([`CRM/Core/Permission.php`:1859-1865]), an ownership semantic the code beneath it
 does not implement.
 
-> **Evidence standard.** The two preceding paragraphs are a **reading of the access callback's
-> source**, not an exploit that was executed. No runtime was stood up for this run, no request
-> was issued and no data was retrieved. Confirm it against the target deployment before treating
-> it as an incident rather than as a design input to this story.
+> **Evidence standard.** The two preceding paragraphs are a **static reading of the access
+> callback's source**, not a reproduced exploit: no request was issued and no data retrieved to
+> confirm it. Confirm the behaviour against the target deployment before treating it as an
+> incident rather than as a design input to this story.
 
 The surface has the shape it does because the two parameters are independent. The legacy
 dashboard renders the link as `reset=1&id=$id&cid=$contact_id`
@@ -218,9 +258,10 @@ these changes what reusing it would actually commit the Epic to.
 ([`CRM/Contribute/Form/Task/Invoice.php`:487], [`:501`], [`:514`], defined at [`:664`]) and
 records an Activity through `addActivities` ([`:619`], the `Activity.create` call itself at
 [`:649`]). A donor read on that route is therefore not side-effect-free today. Whether those
-existing side effects are acceptable for a donor read is part of `CLR-10` and is **not** settled
-here — this story asserts only that no column of the contribution record is written, which is a
-different and narrower promise.
+existing side effects are **kept** is part of `CLR-10` and is **not** settled here — this story
+asserts only that no column of the contribution record is written, which is a different and
+narrower promise. What *is* settled here is the shape those writes must take if they are kept,
+which the two requirement paragraphs below this list of properties set out.
 
 *It applies no status validation.* The four-status check — Completed, Pending, Refunded and
 Partially paid — belongs to the form's `preProcess`
@@ -239,6 +280,61 @@ whether the route authorizes or renders. No claim is made about the setting's ef
 core. The consequence for the backlog is that `CLR-07` is a question about receipt shape and link
 discoverability, **not** about route reachability.
 
+**What persistence on a donor GET would commit the Epic to.** On the download branch the request
+renders ([`CRM/Contribute/Form/Task/Invoice.php`:512]), writes the stored file ([`:514`]), creates
+the Activity ([`:515`]) and exits ([`:517`]); the two mail branches do the same at [`:487-488`]
+and [`:501-502`]. `addActivities` records the type `Downloaded Invoice` ([`:626`]) with the
+session user as source and the donor as target, and attaches the rendered PDF to the activity
+([`:639-645`]) through APIv3 `Activity.create` ([`:649`]). **Nothing deduplicates and nothing
+expires**: N requests leave N files and N activity records, so the write is unbounded in the
+number of requests rather than in the number of receipts. The affordance that reaches it carries
+no request integrity either — the legacy dashboard assembles `reset=1&id=$id&cid=$contact_id`
+([`templates/CRM/Contribute/Page/UserDashboard.tpl`:48]) and renders it as a plain anchor
+([`templates/CRM/Contribute/Page/UserDashboard.tpl`:50-51]), and the route declares
+`page_type` 1 ([`CRM/Contribute/xml/Menu/Contribute.xml`:304]) while core's route-level key check
+applies to `page_type` 3 only ([`CRM/Core/Permission.php`:573-578], the validation at
+[`CRM/Core/Permission.php`:575], the signing and checking mechanism at [`CRM/Core/Key.php`:90]
+and [`CRM/Core/Key.php`:111]). So a receipt request on that route is a state-changing `GET` that
+any page the donor visits can issue, repeatedly, on their session.
+
+**The invariant, and why `CLR-10` does not get to waive it.** Criterion 5 requires one of two
+shapes, and both are available on either route: the receipt `GET` is **side-effect-free**; or the
+stored file and the Activity are reached only through a **request-integrity-checked, non-`GET`
+transition**, idempotent per contribution rather than per request — one retained artifact for a
+given contribution and donor, not one per click — under a **stated retention and cleanup rule**,
+with the activity record carrying no more than the contribution reference and the acting identity.
+`CLR-10` chooses the route and decides whether the writes are kept; what it cannot do is authorise
+them **unprotected**, because a cross-site-issued `GET` that stores a file and appends to a donor's
+activity history on every load is a defect independent of which route the Epic adopts. This
+constrains how the write happens, not the affordance: the row-level link STORY-002 supplies stays
+a link, and STORY-004 carries the same invariant for the download path.
+
+**Authorization must stay bound to the read that produces the output.** This is the requirement
+that a scoped check in front of an inherited renderer does not by itself satisfy, and the existing
+renderer shows why. `printPDF` re-reads the row by bare identifier — it instantiates
+`CRM_Contribute_BAO_Contribution`, assigns `id` and calls `find(TRUE)`
+([`CRM/Contribute/Form/Task/Invoice.php`:299-301]) — and the details it renders from come from
+`getElements`, which runs `LineItem::get(FALSE)` keyed on the contribution identifiers alone
+([`CRM/Contribute/Form/Task/Invoice.php`:551-557]) and takes each row's contact from the line
+item's own `contribution_id.contact_id` ([`:562`]). The `cid` the request supplied constrains
+neither selection nor rendering on the PDF branch: the only contact-derived filter is
+`excludeContactIds`, which is populated solely when the output is *not* a PDF ([`:579`]), so the
+exclusion test the render loop applies ([`:292`]) excludes nothing there.
+
+That produces one consequence and one requirement. A scoped check followed by an independent
+bare-identifier read **authorizes one query and renders another**: they are separate reads of a
+mutable table, so a record that qualified at the check can be reassigned, unlinked from its
+recurring gift, flagged test-mode, re-dated or moved outside the eligible-status set before the
+bytes are produced, and nothing on the render path re-tests any of it. The receipt path must
+therefore either **carry the authorized row's values into rendering**, so that no second read by
+identifier occurs, or **re-apply predicates 1 to 4, the `CLR-13` status set and any `CLR-05`
+financial-type restriction in the same read that produces the output**, refusing under the
+non-disclosing contract if any of them no longer holds. Criterion 8 is the test for it: it passes
+under either implementation and fails a path that checks once and renders from a later read. The
+same requirement reaches the reuse decision — reusing that renderer means supplying it with
+already-authorized data or wrapping its final read, not placing a check in front of it and leaving
+its own reads intact, which is one more input to `CLR-10`.
+
 **Donor status eligibility is an open product question, not an inherited rule.** Core carries two
 staff-side precedents, and they do not agree with each other. The invoice task's form validates
 for Completed, Pending, Refunded and Partially paid
@@ -252,11 +348,14 @@ test at [`CRM/Contribute/Form/Task/PDF.php`:44], the bounce at
 [`CRM/Contribute/Form/Task/PDF.php`:70]) — so that path permits Completed only. Both precedents
 are staff-side, and neither of them runs on the donor-reachable route, so nothing in core
 currently constrains which statuses a donor may receipt; between them the two bracket the
-decision rather than settle it. That decision is `CLR-13`. Two invariants hold whichever set
-is chosen, and both are asserted by criterion 4: the set is enforced **identically** by the
-viewing path and by STORY-004's download path, and credit-note rendering is preserved for
-Refunded and Cancelled rather than replaced by a plain receipt. List *visibility* of Failed and
-Cancelled records is a separate decision belonging to STORY-002 under `CLR-11`.
+decision rather than settle it. That decision is `CLR-13`. Its question text names the
+invoice-form set as the in-core precedent; the stricter Completed-only precedent recorded above
+belongs to the same decision, so the chosen set is weighed against both rather than against one.
+Two invariants hold whichever set is chosen, and both are asserted by criterion 4: the set is
+enforced **identically** by the viewing path and by STORY-004's download path, and credit-note
+rendering is preserved for Refunded and Cancelled rather than replaced by a plain receipt. List
+*visibility* of Failed and Cancelled records is a separate decision belonging to STORY-002 under
+`CLR-11`.
 
 **`receipt_date` records a send, not a document.** The column is nullable and its own description
 reads "when (if) receipt was sent. populated automatically for online donations w/ automatic
@@ -269,12 +368,53 @@ them is the most likely design error in this story:
   value as the date a receipt was sent for exactly this reason.
 - The Contribution record stores **no canonical receipt document**. Historical PDFs may
   nonetheless exist as File records attached to Activities, because the staff path writes them
-  ([`CRM/Contribute/Form/Task/Invoice.php`:664], [`:619`]) — so whether an originally issued
+  ([`CRM/Contribute/Form/Task/Invoice.php`:664], [`:619`], the PDF attached as `attachFile_1` at
+  [`:639-644`] and created with the Activity at [`:649`]) — so whether an originally issued
   artifact can be *identified as such* is `CLR-09`, an investigation, rather than a settled
   impossibility.
 
+**If a stored File is ever part of the answer to `CLR-09`, it is delivered by this path and never
+around it.** This requirement is fixed whichever way that question is settled, and it is stated
+because the File that would satisfy it sits behind a **second authorization surface** which knows
+nothing about the contribution the file belongs to. Core's file route declares
+`access uploaded files` as its whole access argument and dispatches to `CRM_Core_Page_File`
+([`CRM/Core/xml/Menu/Misc.xml`:61-66], the access argument at
+[`CRM/Core/xml/Menu/Misc.xml`:64]), and that page takes a file identifier with a token, or a bare
+filename, and streams the file ([`CRM/Core/Page/File.php`:22-118], the token test at
+[`CRM/Core/Page/File.php`:42] and the streamed response at [`CRM/Core/Page/File.php`:109-116]).
+The token is no substitute for the ownership check it lacks: `generateFileHash()` encodes an
+expiry and the file identifier and nothing else ([`CRM/Core/BAO/File.php`:824-836], the payload at
+[`CRM/Core/BAO/File.php`:833-834]), `validateFileHash()` accepts any token whose decoded
+`civi.file` equals the requested identifier ([`CRM/Core/BAO/File.php`:846-854], the comparison at
+[`CRM/Core/BAO/File.php`:849]), and the entity parameter both functions still accept is documented
+"deprecated unused param" ([`CRM/Core/BAO/File.php`:818], [`CRM/Core/BAO/File.php`:842]). So such
+a URL binds a file and a lifetime — by default the seven days `checksum_timeout` carries
+([`settings/Core.setting.php`:663-682], the default at [`settings/Core.setting.php`:675], read for
+this purpose at [`CRM/Core/BAO/File.php`:829-830]) — and binds no actor, no contact, no
+contribution and no purpose. That is precisely the binding the Epic's "and nothing else's"
+boundary requires, so it has to be supplied here.
+
+Three requirements follow, and STORY-004's download path inherits all three unchanged:
+
+1. **The donor role holds no `access uploaded files`.** STORY-001's contract forbids it in the
+   same breath as `view all contacts`, and that story's fifth acceptance criterion is where the
+   granted set is enumerated and checked.
+2. **A stored File is resolved server-side from a contribution this path has already
+   authorized** — the contribution first, under all four predicates and the eligible-status set,
+   and only then the File reached from that contribution's own Activity. A file identifier
+   supplied by the caller is never the input to that lookup, because a caller-supplied file
+   identifier is the one input none of the four predicates constrains.
+3. **The bytes are streamed by this path**, under the same permission gate and the same
+   non-disclosing refusal contract as the receipt content it stands in for. A donor is never
+   redirected or linked to a raw `civicrm/file` URL and is never handed a file token to hold. If
+   a deployment nonetheless requires one, it is bound to the acting contact, to the authorized
+   contribution and to that single purpose, and given the shortest life that serves the request
+   rather than the seven-day default above.
+
 Criterion 6 holds under either answer: a defined state is shown, `receipt_date` is not written,
-and nothing is presented as the originally issued receipt unless it is verifiably that artifact.
+and nothing is presented as the originally issued receipt unless it is verifiably that artifact —
+and where that artifact is a stored File, it reaches the donor only through the three requirements
+above, so a reviewer checking criterion 6 checks the file-delivery boundary along with it.
 
 **The APIv3 `Contribution.sendconfirmation` action must not be used as a read path.** It is the
 obvious-looking way to obtain receipt content and it mutates the record. Its `receipt_update`
@@ -303,7 +443,12 @@ including both `id` and `cid`, is already asserted by
 [`tests/phpunit/CRM/Contact/Page/View/UserDashBoardTest.php`:120]), and invoice rendering is
 covered by [`tests/phpunit/CRM/Contribute/Form/Task/InvoiceTest.php`:22-224]. The non-disclosure
 cases in criteria 2 to 4 are new coverage with no existing home and need a test that varies the
-identifier while holding the session fixed. Suites are declared over `tests/phpunit/api`,
+identifier — including its malformed encodings — while holding the session fixed, asserting one
+identical response across the whole set. Criterion 8 needs a second new shape: mutate the record
+between the authorizing read and the render, which is expressible without concurrency by updating
+the row inside the request through a hook or a test double on the render step and asserting the
+refusal. Criterion 5 needs a third: repeat one request and assert that the counts of stored files
+and activity records do not grow with it. Suites are declared over `tests/phpunit/api`,
 `tests/phpunit/CRM` and `tests/phpunit/Civi` ([`phpunit.xml.dist`], the suites at
 [`phpunit.xml.dist`:17-27]), bootstrapped through `tests/phpunit/CiviTest/bootstrap.php`
 ([`phpunit.xml.dist`:14]).
@@ -347,9 +492,9 @@ closing summary uses, so that neither document can drift from the other:
 
 `[NEEDS CLARIFICATION: CLR-09 — Is a donor shown a reproduction of the receipt originally issued, or one regenerated from current data and current message templates? The Contribution record stores no receipt document, but historical PDFs may exist as File records attached to Activities; whether those can be reliably identified as the artifact originally issued needs investigation before this is settled.]`
 
-`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
+`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read. If they are kept, the decision must also state the request-integrity, idempotency, deduplication and retention controls they run under, because an unprotected state-changing GET is not an available answer.]`
 
-`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route, and the two staff-side precedents disagree: the staff invoice form validates for Completed, Pending, Refunded and Partially paid, while the Print Contribution Receipts task permits Completed only. Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
+`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
 
 ---
 

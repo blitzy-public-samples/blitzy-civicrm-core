@@ -5,12 +5,6 @@
 - **Baseline codebase:** CiviCRM `6.17.alpha1` ([`xml/version.xml`:3])
 - **Status:** drafted for Product / Engineering / QA sign-off, ahead of implementation
 
-This document is the human-readable entry point to the backlog for one Epic. It carries the
-Epic definition, the story roster and its dependency graph, the JIRA import reconciliation,
-the closing `[NEEDS CLARIFICATION]` summary, the deferred-Epic note and the record of values
-that were inferred rather than specified. The four stories themselves are separate documents;
-the two machine-readable exports and the JIRA mapping file are separate again.
-
 ---
 
 ## 1. Epic definition
@@ -46,8 +40,7 @@ becomes two stories rather than one (see §4.2).
 
 ### 1.2 What this Epic does not change
 
-Carried from the business objective's own exclusions, so a reviewer can confirm the blast radius
-is what they expect:
+Carried from the business objective's own exclusions, so the Epic's blast radius is explicit:
 
 - One-time and non-recurring donation handling is unaffected.
 - There is no change to how staff process donations.
@@ -59,30 +52,20 @@ is what they expect:
 
 ## 2. How to read this backlog
 
-**This run produced specification artifacts only.** No CiviCRM code was written, no pull request
-was opened, and no existing repository file was modified. Implementation is a separate exercise
-that consumes these artifacts; the acceptance criteria in the stories are what that exercise is
-verified against.
+**This backlog is a specification, not an implementation.** It contains no CiviCRM code and
+changes no existing repository file. Implementation is a separate exercise that consumes these
+artifacts, and the acceptance criteria in the stories are what that exercise is verified against.
 
-**No runtime was stood up for this run.** Every factual claim about the existing system is a
-reading of source at a stated address, obtained by static inspection. No claim rests on observed
-runtime behaviour — most importantly, the ownership gap described in §5 is a reading of an access
-callback, not an exploit that was executed. Where a fact about the *target deployment* cannot be
-read from source (which extensions are enabled, which roles exist, which settings are on), the
-backlog raises a clarification instead of guessing.
-
-**No user-specified rules govern this project.** The rules document for this project contains no
-rules, so the work is held to enterprise-standard best practice and to the validation criteria the
-originating technical specification sets for this run's output. No rule was invented to fill the
-gap.
+**Every factual claim about the existing system is a static reading of source at a stated
+address**, against the baseline version named above — not a description of observed runtime
+behaviour. Most importantly, the ownership gap described in §5 is a reading of an access callback
+rather than a reproduced exploit. Where a fact about the *target deployment* cannot be read from
+source — which extensions are enabled, which roles exist, which settings are on — the backlog
+raises a clarification instead of guessing.
 
 **Business context comes from the leadership business objective** supplied with the request. That
 document is not part of this repository and is not cited as a repository path anywhere in these
 artifacts.
-
-**Section references of the form `0.x.y`** — which appear inside a few clarification flags —
-point to the originating technical specification that produced this backlog, not to a section of
-this document.
 
 ### 2.1 Artifact inventory
 
@@ -136,7 +119,7 @@ cannot honestly claim the effect. It is stated where it belongs, in §8.
 
 The objective states a fourth criterion — that every self-service action is logged and visible to
 staff — which belongs to the staff-visibility and audit-trail Epic. It is **not** claimed by this
-Epic and is carried forward intact in §8. This run creates no logging capability.
+Epic and is carried forward intact in §8. This Epic introduces no logging capability.
 
 ### 3.3 Which story answers which
 
@@ -212,7 +195,7 @@ own.
 The convention in force reads: **High** for stories in the pause/cancel and audit-trail Epics,
 **Medium** for the rest, *unless the business objective implies otherwise*.
 
-No story in this run belongs to either of those two Epics, so the first clause never fires. The
+No story in this Epic belongs to either of those two Epics, so the first clause never fires. The
 **exception clause does fire**, and here is the reasoning a reviewer should check rather than take
 on trust.
 
@@ -255,6 +238,18 @@ inherit: the renderer behind the existing receipt route instantiates
 whether any of it is reused at all is part of the still-open reuse-or-replace decision in
 `CLR-10` rather than something this grounding settles.
 
+One requirement does follow from that inherited renderer, and it is not left to the decision:
+**the record state that authorizes a receipt request must be the state its output is rendered
+from.** That renderer re-reads the row by bare identifier
+([`CRM/Contribute/Form/Task/Invoice.php`:299-301]) and derives each row's contact from a second
+unchecked read keyed on the contribution alone
+([`CRM/Contribute/Form/Task/Invoice.php`:551-557]), so a scoped check placed in front of it
+authorizes one query and renders another — and between the two the record can change hands, lose
+its recurring link, be flagged test-mode, be re-dated or leave the eligible-status set. Whichever
+route `CLR-10` selects, the receipt path either carries the authorized row into rendering or
+re-applies every predicate in the read that produces the output; STORY-003 and STORY-004 each
+assert that as an acceptance criterion.
+
 **2. The tenant boundary rests on a query predicate, not on an ACL.** On a display that bypasses
 ACLs, a single assignment turns permission checks off for the underlying query
 ([`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:135]), and the ACL clause
@@ -277,10 +272,10 @@ separately-supplied contribution `id` belongs to that contact. Read plainly, a d
 donor-scoped permission can pass their own `cid` alongside another contribution's `id` — which is
 precisely the failure the Epic's "and nothing else's" exists to prevent.
 
-> **Evidence standard.** The preceding paragraph is a **reading of the access callback's source**,
-> not an exploit that was executed. No runtime was stood up for this run, no request was issued
-> and no data was retrieved. It should be confirmed against the target deployment before it is
-> treated as an incident rather than a design input.
+> **Evidence standard.** The preceding paragraph is a **static reading of the access callback's
+> source**, not a reproduced exploit: no request was issued and no data retrieved to confirm it.
+> Confirm it against the target deployment before treating it as an incident rather than a design
+> input.
 
 The consequence for the backlog is that the receipt stories are not free to assume a clean slate:
 they must decide between hardening that route and reusing it, or specifying an independent path.
@@ -303,12 +298,11 @@ addresses before the stories are estimated as they stand.
 ## 6. JIRA import reconciliation
 
 `jira-import-mapping.csv` carries the nine native columns plus **Issue Type, Priority, Epic Link,
-Components** — thirteen in all — with one Epic row and four story rows. This section is written
-for whoever runs the import.
+Components** — thirteen in all — with one Epic row and four story rows. What follows is the
+operator-facing reconciliation: the caveat that governs the file, the limits of its fixed schema,
+the Epic row cell by cell, and the transformation each candidate target project requires.
 
 ### 6.1 The mandated caveat
-
-Reproduced verbatim, as required, including its lower-case opening:
 
 > this mapping file is a starting point for a human to review before uploading, not a guarantee
 > that every field will import cleanly; Team-managed vs. Company-managed JIRA projects expose
@@ -480,10 +474,12 @@ genuinely is identical — the Epic name string, story identifiers, titles and l
 
 ## 7. Closing `[NEEDS CLARIFICATION]` summary
 
-**Fifteen questions are open: thirteen at story level and two at import level.** Every field value
-of every story is fixed — no story contains a placeholder, a "to be determined" or a silently
-chosen default — but that is not the same as everything being decided. Several of these questions
-determine architecture, authorization, receipt semantics, file format or import mechanics.
+**Fifteen tracked clarification flags are open: thirteen at story level and two at import level.**
+Every field value of every story is fixed — no story contains a placeholder, a "to be determined"
+or a silently chosen default — but that is not the same as everything being decided. Several of
+these questions determine architecture, authorization, receipt semantics, file format or import
+mechanics. The inventory is the fifteen flags below; §7.5 records a scope consideration that
+carries no flag of its own and does not add to that total.
 
 **No flag below is answered, softened, or dropped because a plausible default exists.** In a
 specification run the story content *is* the implementation, so a suppressed question becomes an
@@ -491,7 +487,8 @@ invented decision downstream. Each is reproduced here in the same full words its
 carries, so the two can be diffed.
 
 Each flag is reproduced **verbatim from its owning story**, including phrasing that summarises
-rather than cites; the grounded readings, with resolving addresses, are in §5.
+rather than cites; the grounded readings, with resolving addresses, are in §5 and in the
+Technical Notes of the story that owns the flag.
 
 ### 7.1 Index
 
@@ -527,7 +524,7 @@ Architecture, authorization or observable behaviour cannot be settled without th
 
 **CLR-03** — owner STORY-002
 
-`[NEEDS CLARIFICATION: CLR-03 — Where is the pane hosted: extend the legacy Smarty dashboard, add it to the alpha Afform dashboard in ext/user_dashboard, or package the managed entities in a new extension and surface them through the existing tag mechanism? 0.5.5 compares the three.]`
+`[NEEDS CLARIFICATION: CLR-03 — Where is the pane hosted: extend the legacy Smarty dashboard, add it to the alpha Afform dashboard in ext/user_dashboard, or package the managed entities in a new extension and surface them through the existing tag mechanism?]`
 
 **CLR-05** — owner STORY-003
 
@@ -541,13 +538,27 @@ Architecture, authorization or observable behaviour cannot be settled without th
 
 `[NEEDS CLARIFICATION: CLR-09 — Is a donor shown a reproduction of the receipt originally issued, or one regenerated from current data and current message templates? The Contribution record stores no receipt document, but historical PDFs may exist as File records attached to Activities; whether those can be reliably identified as the artifact originally issued needs investigation before this is settled.]`
 
+One requirement is **not** part of that question, and is fixed whichever way it is answered: a
+stored File is never a second route to receipt content. Core's file route is gated on
+`access uploaded files` alone ([`CRM/Core/xml/Menu/Misc.xml`:61-66], the access argument at
+[`CRM/Core/xml/Menu/Misc.xml`:64]) and streams a file against an identifier and a token without
+relating either to a contribution or a contact ([`CRM/Core/Page/File.php`:22-118], the token test
+at [`CRM/Core/Page/File.php`:42]), and that token carries only a file identifier and an expiry
+([`CRM/Core/BAO/File.php`:824-836], the payload at [`CRM/Core/BAO/File.php`:833-834]) — so it
+binds no actor and no contribution. Accordingly the donor role holds no `access uploaded files`
+(STORY-001), and any stored File that answers `CLR-09` is resolved server-side from a contribution
+the receipt path has already authorized and streamed by that path, never reached through a raw
+`civicrm/file` URL and never handed to a donor as a token to hold. STORY-003 states the
+requirement in full and STORY-004 inherits it: `CLR-09` decides **which artifact** a donor is
+shown, not **how it is authorized**.
+
 **CLR-10** — owner STORY-003
 
-`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
+`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read. If they are kept, the decision must also state the request-integrity, idempotency, deduplication and retention controls they run under, because an unprotected state-changing GET is not an available answer.]`
 
 **CLR-13** — owner STORY-003
 
-`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route, and the two staff-side precedents disagree: the staff invoice form validates for Completed, Pending, Refunded and Partially paid, while the Print Contribution Receipts task permits Completed only. Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
+`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
 
 ### 7.3 Informational
 
@@ -574,6 +585,27 @@ flags — and "informational" means *proceed and confirm*, not *ignore*.
 
 `[NEEDS CLARIFICATION: CLR-12 — In what file format is a downloaded receipt delivered, and where WeasyPrint or wkhtmltopdf is the configured PDF engine, is that external executable present at the configured path on the target instance?]`
 
+**What answering `CLR-12` requires.** The file format is one half of the question. The other half
+— what the target instance must satisfy — is a preliminary prerequisite plus four further
+conditions, and only the prerequisite is established by the platform:
+`CRM_Utils_PDF_Utils::getPdfEngine()` names which of WeasyPrint, wkhtmltopdf and bundled dompdf
+the configuration selects, and the two executable-path settings validate presence alone —
+`file_exists` and `is_executable`, never a version. The four, with their resolving addresses, are
+in STORY-004's Technical Notes: (1) the selected wrapper's declared PHP support against the
+deployed interpreter, where the locked WeasyPrint wrapper enumerates minor versions only as far as
+`8.3.*` while core requires the open-ended `^8.1.2` and resolution against a pinned platform keeps
+the mismatch off the install log; (2) whether the configured executable is still maintained,
+CiviCRM's own setting text calling wkhtmltopdf discontinued; (3) an explicit remote-and-local
+resource policy, since dompdf's remote fetching defaults to enabled and a single template-borne
+remote reference makes the host fetch that address while rendering a donor's receipt — server-side
+request forgery on a donor-reachable route — while local image loading starts confined to dompdf's
+own package folder and must therefore be widened, if at all, to exactly the receipt assets needed;
+and (4) failure behaviour: however the other three resolve, a failure in any of them must reach
+the donor as a generic refusal carrying no partial file and no host path. The flag stays
+**informational** because a defensible default exists to proceed on — fetch nothing, and verify
+the wrapper-and-interpreter pair before acceptance — not because the question reduces to a file
+format.
+
 ### 7.4 Blocking for import only
 
 No bearing on implementation; these block loading the backlog into JIRA. Both are owned by this
@@ -588,26 +620,29 @@ in §6.8 and §6.5–6.6.
   hierarchy-import procedure to company-managed projects, and reported behaviour differs between
   the two.
 
-### 7.5 One further open question, deliberately not filed as a story
+### 7.5 A scope consideration outside the tracked inventory
+
+**This is not a sixteenth flag.** It carries no `CLR-nn` identifier, no story owns it, and the
+fifteen-flag total in §7.1 is complete without it. It is recorded here because it bears on the
+Epic's scope and would otherwise go unstated.
 
 The ownership gap in the existing invoice route's access check (§5, claim 3) is a defect in code
-this run does not touch. `CLR-10` forces the receipt stories to deal with it, because the Epic's
+this Epic does not modify. `CLR-10` forces the receipt stories to deal with it, because the Epic's
 "and nothing else's" boundary cannot be satisfied by reusing that route unmodified.
 
 **Whether the organisation additionally wants that gap remediated independently of this Epic is an
 open question, surfaced here.** It is deliberately **not** filed as a standalone remediation story:
-the request was for one Epic's backlog, not a security audit, and inventing a story outside the
-Epic would breach its boundary. Someone with the authority to weigh it should decide — and note
-that the gap affects a route reachable today, on whatever schedule this Epic runs to.
+this Epic's boundary is receipt and contribution history self-service, and a remediation story
+outside that boundary would breach it. Someone with the authority to weigh it should decide — and
+note that the gap affects a route reachable today, on whatever schedule this Epic runs to.
 
 ---
 
 ## 8. The other three Epics — deferred
 
 The business objective describes **four** capability areas for the donor self-service portal. This
-run is scoped to one of them, as a lower-risk first exercise of the pipeline. The other three
-exist in the objective and are **deferred to subsequent runs, once this one is validated end to
-end**:
+Epic covers one of them, as the lower-risk first step. The other three exist in the objective and
+are **deferred to subsequent runs, once this one is validated end to end**:
 
 1. **Payment method, amount and frequency self-service** — a donor updating the card a recurring
    gift is charged to, or changing what and how often they give.
@@ -615,32 +650,49 @@ end**:
 3. **Staff visibility with an audit trail** — staff being able to see what donors changed, and
    when.
 
-**No story, acceptance criterion or artifact row is drafted for any of the three in this run.**
-The four stories in §4 are the complete backlog produced here. Recurring-contribution mutation,
-payment-processor integration and pause/cancel mechanics were not investigated, so nothing in
-these artifacts should be read as a design position on them.
+**No story, acceptance criterion or artifact row is drafted for any of the three.** The four
+stories in §4 are the complete backlog for this Epic. Recurring-contribution mutation,
+payment-processor integration and pause/cancel mechanics are outside its boundary and were not
+investigated, so nothing in these artifacts should be read as a design position on them.
 
 ### 8.1 The logging success criterion travels with the third Epic
 
 The objective states a success criterion which belongs to the staff-visibility and audit-trail
-Epic rather than to this one. It is carried forward here **intact**, so the later run inherits it
-rather than rediscovering it:
+Epic rather than to this one. It is carried forward here **intact**, so the Epic that owns it
+inherits it rather than rediscovering it:
 
 > Every self-service action is logged and visible to staff.
 
-**This run creates no logging capability and specifies no audit write.** That is the deliberate
-resolution of a genuine tension: the criterion is stated for the portal as a whole, while the
-instruction to defer the audit Epic is explicit and specific. The specific instruction governs,
-and the criterion is preserved verbatim above rather than quietly dropped.
+**This Epic introduces no logging capability and specifies no audit write.** That resolves a
+genuine tension: the criterion is stated for the portal as a whole, while the deferral of the
+audit Epic is explicit and specific. The specific boundary governs, and the criterion is preserved
+verbatim above rather than quietly dropped.
 
 One boundary on that statement, so it is not over-read. It means **no new** logging or audit
 capability is introduced. It does **not** mean that behaviour shipping in the codebase today must
 be suppressed: the existing donor-reachable receipt path writes a stored file and creates an
 Activity as part of rendering ([`CRM/Contribute/Form/Task/Invoice.php`:487,501,514,619,649,664,671]).
-Whether those existing side effects are acceptable for a donor read is a decision the receipt
+Whether those existing side effects are **kept** for a donor read is a decision the receipt
 stories must take explicitly — it is the closing sentence of `CLR-10` — and not something settled
 here by implication. What the stories do assert unconditionally is that no contribution record is
 modified.
+
+Two properties of those writes are **not** deferred with the audit Epic, because they are
+properties of a donor request rather than features of staff visibility. First, they are unbounded:
+each request renders, stores a file and creates an Activity carrying the rendered PDF
+([`CRM/Contribute/Form/Task/Invoice.php`:512,514,515,619,626,639-645,649]), with nothing
+deduplicating or expiring them, so N requests leave N artifacts. Second, they carry no request
+integrity: the affordance is a plain anchor assembled at
+[`templates/CRM/Contribute/Page/UserDashboard.tpl`:48] and rendered at
+[`templates/CRM/Contribute/Page/UserDashboard.tpl`:50-51], on a route declared `page_type` 1
+([`CRM/Contribute/xml/Menu/Contribute.xml`:304]), while core's route-level key check applies to
+`page_type` 3 only ([`CRM/Core/Permission.php`:573-578]). So the receipt stories carry an
+invariant that stands whichever way `CLR-10` is answered: a receipt `GET` is side-effect-free, or
+the persistence is reached through a request-integrity-checked non-`GET` transition, idempotent
+per contribution rather than per request, under a stated retention and cleanup rule, with the
+activity record carrying no more than the contribution reference and the acting identity. That is
+a control on the mechanics of behaviour shipping today, **not** a new logging or audit capability
+— this run still specifies neither, and creates neither.
 
 ### 8.2 The case for the deferred work
 
@@ -656,7 +708,7 @@ points this Epic answers are already spent, and the later runs should cite their
 
 ### 8.3 Priority convention for the deferred Epics' stories
 
-Repeating §4.3's closing point where a later run will look for it. The convention in force reads
+§4.3's closing point, restated here beside the Epics it governs. The convention in force reads
 **High** for stories in the **pause/cancel** and **staff-visibility/audit-trail** Epics, and
 **Medium** for the rest unless the business objective implies otherwise.
 
@@ -682,8 +734,8 @@ Neither inference affects the backlog's meaning: changing the Epic row's Priorit
 in its Story Points cell would alter no story, no acceptance criterion and no dependency.
 
 **`Components` is not on this list.** It is empty on every row **by instruction** — the component
-taxonomy is specific to the target JIRA project and belongs to whoever runs the import, not to
-this run. That is a specified value, not an inferred one, and it should be populated at import
+taxonomy is specific to the target JIRA project and belongs to the import operator rather than to
+this backlog. That is a specified value, not an inferred one, and it should be populated at import
 time rather than treated as an omission.
 
 For the avoidance of doubt, these were **specified and not inferred**: the four story point

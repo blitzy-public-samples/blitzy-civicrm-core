@@ -1,9 +1,9 @@
 # STORY-002 — Recurring-gift contribution history list scoped to the donor
 
-The second story of the Epic defined in [`epics.md`](epics.md), which also carries the story
-roster, the JIRA import reconciliation and the consolidated clarification summary. This document
-carries the nine mandated story fields and nothing else — there is no Epic field among them, by
-design.
+The second story of the Epic defined in [`epics.md`](epics.md). The nine mandated fields follow
+under their own headings, and no Epic field appears among them; Epic-level content — the story
+roster, the JIRA import reconciliation and the consolidated clarification summary — stays in
+`epics.md`.
 
 This story **implements** the four-predicate scoping contract published once in
 [`STORY-001-donor-identity-and-self-only-scoping.md`](STORY-001-donor-identity-and-self-only-scoping.md);
@@ -105,15 +105,14 @@ recurring gifts cannot receipt them either.
 
 ## Technical Notes
 
-Every claim below is a **reading of source at the stated address**, obtained by static inspection
-of this checkout. No runtime was stood up for this run, so nothing here rests on observed
-behaviour, and any statement about what a *particular deployment* has configured is raised as a
-clarification rather than asserted. The baseline is CiviCRM `6.17.alpha1`
-([`xml/version.xml`:3]); a different target version must be re-checked against these addresses
-before the story is estimated as it stands. Where the same file is cited repeatedly, its path is
-given in full once in that passage and the later citations in the passage are line numbers alone —
-a citation of the form ([`:68`]) always means that line of the file named in full immediately
-before it.
+**Source basis.** Every claim below about the existing system is a **static reading of source at
+the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
+observed behaviour. Revalidate the cited locators against another version or target deployment
+before this story is estimated as it stands. What a *particular deployment* has configured is not
+readable from source and is raised as a clarification rather than asserted. Where the same file is
+cited repeatedly, its path is given in full once in that passage and the later citations in the
+passage are line numbers alone — a citation of the form ([`:68`]) always means that line of the
+file named in full immediately before it.
 
 **The specification documents this surface, so this is an extension of a supported concept rather
 than an invention.** §7.3.4 of the ingested Technical Specification records constituent
@@ -194,11 +193,12 @@ decision, taken under `CLR-03` below.
    its position relative to the shipped `UserDashboard_Contributions` pane**, so the presentation
    question has a naming consequence and should not be settled after the name is fixed.
 
-One note for whoever writes the tests, since this story adds a `UserDashboard_*` SavedSearch and
-so fires that hook: the condition passes `$legacySetting['value']` to `in_array()` as the haystack
-with no null guard ([`ext/user_dashboard/user_dashboard.php`:90]), so a context in which the
-setting resolves to `NULL` reaches `in_array()` with a non-array second argument. Plan the fixture
-setup with that in view.
+**Test-fixture constraint**, because this story adds a `UserDashboard_*` SavedSearch and so fires
+that hook: the condition passes `$legacySetting['value']` to `in_array()` as the haystack with no
+null guard ([`ext/user_dashboard/user_dashboard.php`:90]), so where that setting resolves to
+`NULL` the call receives a non-array haystack — a `TypeError` on the PHP 8 floor this repository
+requires ([`composer.json`:`require.php`]). Fixtures must initialise the setting to an array, or
+cover that failure intentionally.
 
 **Read through APIv4 `Contribution.get`, which is inherited rather than overridden.** The
 contribution entity is supplied by an extension and extends the generic DAO entity
@@ -296,7 +296,7 @@ And `is_test` defaulting to `FALSE` with no filter on the shipped pane is why pr
 written explicitly: the default keeps ordinary records visible, it does not exclude the test ones.
 The recurring entity the foreign key targets is declared at
 [`schema/Contribute/ContributionRecur.entityType.php`:3-12], cited for identity only — recurring
-mutation is outside this run's investigation boundary and nothing about it was examined.
+mutation is outside this Epic's investigation boundary and nothing about it is described here.
 
 **Risk context — carried as risk, not converted into work.** Three items belong in the estimate
 conversation and none of them becomes a story here:
@@ -343,7 +343,7 @@ architecture cannot be settled without it — and `CLR-04` and `CLR-11` are **in
 meaning implementation may proceed while the answer is confirmed rather than that the answer can
 be skipped. `epics.md` §7 is where that classification is authoritative:
 
-`[NEEDS CLARIFICATION: CLR-03 — Where is the pane hosted: extend the legacy Smarty dashboard, add it to the alpha Afform dashboard in ext/user_dashboard, or package the managed entities in a new extension and surface them through the existing tag mechanism? 0.5.5 compares the three.]`
+`[NEEDS CLARIFICATION: CLR-03 — Where is the pane hosted: extend the legacy Smarty dashboard, add it to the alpha Afform dashboard in ext/user_dashboard, or package the managed entities in a new extension and surface them through the existing tag mechanism?]`
 
 `[NEEDS CLARIFICATION: CLR-04 — How are the new recurring-only pane and the existing all-contributions pane presented together on the donor route, so a donor is not confused about which list they are reading? Both may coexist; this is a presentation decision, not a decision to remove existing content.]`
 
