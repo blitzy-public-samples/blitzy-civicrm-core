@@ -177,7 +177,8 @@ row ([`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:575-
 call at [`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:584]).
 
 **That negative claim is bounded by enumeration rather than asserted.** Within `ext/search_kit`
-the setting is read at exactly five addresses, and none of the five is on the link path:
+the setting is read at five **server-side PHP** addresses, and none of the five is on the link
+path:
 
 1. it is set to `TRUE` for a table display
    ([`ext/search_kit/Civi/Api4/Event/Subscriber/DefaultDisplaySubscriber.php`:154]);
@@ -190,7 +191,25 @@ the setting is read at exactly five addresses, and none of the five is on the li
 5. it triggers adding a primary-key field for non-DAO entities
    ([`ext/search_kit/Civi/Api4/Action/SearchDisplay/AbstractRunAction.php`:1557]).
 
-No claim is made about the setting's effect outside that extension.
+**Those five are the server-side reads, and they are not the whole extension.** The same setting
+is read on the client, in `ext/search_kit/ang`: it gates the bulk-task menu
+([`ext/search_kit/ang/crmSearchDisplayTable/crmSearchDisplayTable.html`:5]) and the row-select
+checkbox that feeds it
+([`ext/search_kit/ang/crmSearchDisplayTable/crmSearchDisplayTableBody.html`:6], with the
+select-column header class at
+[`ext/search_kit/ang/crmSearchDisplayTable/crmSearchDisplayTable.html`:31]); it is one of the
+conditions in `hasExtraFirstColumn()`
+([`ext/search_kit/ang/crmSearchDisplay/traits/searchDisplayBaseTrait.service.js`:205]); and it is
+read and rewritten by the display-admin task configuration
+([`ext/search_kit/ang/crmSearchAdmin/displays/common/searchAdminTasksConfig.component.js`:20-58]).
+Each of those client reads governs bulk-task or row-selection chrome, so they reinforce rather
+than weaken what criterion 5 rests on: none is on the column-`link` path cited above, and with
+`actions` false each either hides its control or contributes nothing — the task menu and the
+row-select checkbox are conditional on the setting, the header class resolves to nothing, and the
+admin component is a staff configuration screen rather than a donor surface. Two bounds on this
+account, stated rather than implied: no claim is made about the setting's effect outside that
+extension, and no claim is made that the server-side list and the client reads named here
+together exhaust every read within it.
 
 **A table display defaults `actions` to `TRUE`**
 ([`ext/search_kit/Civi/Api4/Event/Subscriber/DefaultDisplaySubscriber.php`:152-165], the assignment

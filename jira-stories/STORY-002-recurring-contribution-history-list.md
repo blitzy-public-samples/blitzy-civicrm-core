@@ -266,9 +266,16 @@ exactly once in that file, at
 [`schema/Contribute/Contribution.entityType.php`:411] — the column declaration itself. **No index
 declared for this entity covers the recurring filter.** The claim is bounded to those two
 addresses: it is what this schema file declares, not a statement about indexes a particular
-database may have acquired by other means. Size the query work accordingly, on a table that in
-production holds every contribution the organisation has ever recorded. This is recorded as a
-**consideration, not proposed as schema work** — adding an index is outside this Epic's scope.
+database may have acquired by other means. Size the query work accordingly, on a table that in a
+production instance can hold a large contribution history accumulated over years of giving. How
+much history is actually present is a property of the deployment rather than of the schema:
+nothing in this entity declares a retention guarantee, and contributions do leave the table —
+`contact_id` is declared with `on_delete CASCADE`
+([`schema/Contribute/Contribution.entityType.php`:97-117], the declaration at
+[`schema/Contribute/Contribution.entityType.php`:116]), so deleting a contact removes their
+contributions with them. Size against the target instance's own volume rather than an assumed
+lifetime archive. This is recorded as a **consideration, not proposed as schema work** — adding
+an index is outside this Epic's scope.
 
 Supporting column declarations. Every line number in the table below is a line in
 [`schema/Contribute/Contribution.entityType.php`]:

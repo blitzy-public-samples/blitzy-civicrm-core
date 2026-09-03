@@ -239,10 +239,20 @@ whether the route authorizes or renders. No claim is made about the setting's ef
 core. The consequence for the backlog is that `CLR-07` is a question about receipt shape and link
 discoverability, **not** about route reachability.
 
-**Donor status eligibility is an open product question, not an inherited rule.** The staff invoice
-form's set is the only in-core precedent ([`CRM/Contribute/Form/Task/Invoice.php`:79-92]), and it
-sits on a method the donor path never reaches, as above — so nothing in core currently constrains
-which statuses a donor may receipt. That decision is `CLR-13`. Two invariants hold whichever set
+**Donor status eligibility is an open product question, not an inherited rule.** Core carries two
+staff-side precedents, and they do not agree with each other. The invoice task's form validates
+for Completed, Pending, Refunded and Partially paid
+([`CRM/Contribute/Form/Task/Invoice.php`:79-92]), and it sits on a method the donor path never
+reaches, as above. The receipt-specific staff task behind *Print Contribution Receipts* is
+stricter: `CRM_Contribute_Form_Task_PDF::preProcess()` counts the selected contributions whose
+`contribution_status_id` is not `1` and bounces the staff user with "Please select only
+contributions with Completed status." ([`CRM/Contribute/Form/Task/PDF.php`:38-48], the status
+test at [`CRM/Contribute/Form/Task/PDF.php`:44], the bounce at
+[`CRM/Contribute/Form/Task/PDF.php`:47] and the task's own title at
+[`CRM/Contribute/Form/Task/PDF.php`:70]) — so that path permits Completed only. Both precedents
+are staff-side, and neither of them runs on the donor-reachable route, so nothing in core
+currently constrains which statuses a donor may receipt; between them the two bracket the
+decision rather than settle it. That decision is `CLR-13`. Two invariants hold whichever set
 is chosen, and both are asserted by criterion 4: the set is enforced **identically** by the
 viewing path and by STORY-004's download path, and credit-note rendering is preserved for
 Refunded and Cancelled rather than replaced by a plain receipt. List *visibility* of Failed and
@@ -339,7 +349,7 @@ closing summary uses, so that neither document can drift from the other:
 
 `[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
 
-`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
+`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route, and the two staff-side precedents disagree: the staff invoice form validates for Completed, Pending, Refunded and Partially paid, while the Print Contribution Receipts task permits Completed only. Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
 
 ---
 

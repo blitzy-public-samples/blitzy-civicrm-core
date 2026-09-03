@@ -114,12 +114,28 @@ before the story is estimated as it stands.
 `user_contact_id` token that the dependent predicates use is resolved on the **input** side of
 the query, not by an access-control layer wrapped around it. `FormattingUtil::formatInputValue()`
 ([`Civi/Api4/Utils/FormattingUtil.php`:85-127]) routes a non-numeric operand on a contact-keyed
-field through `resolveContactID()` ([`Civi/Api4/Utils/FormattingUtil.php`:532-543]), which
-delegates to `_civicrm_api3_resolve_contactID()` ([`api/v3/utils.php`:2175-2205]) and throws a
-`CRM_Core_Exception` when the expression cannot be resolved to a contact. For the literal
+field through `resolveContactID()` ([`Civi/Api4/Utils/FormattingUtil.php`:532-543], called at
+[`Civi/Api4/Utils/FormattingUtil.php`:126]), which delegates to
+`_civicrm_api3_resolve_contactID()` ([`api/v3/utils.php`:2184-2205]). For the literal
 `user_contact_id`, that function returns `CRM_Core_Session::getLoggedInContactID()`
 ([`api/v3/utils.php`:2186-2187]) — which is precisely why the identifier is session-derived
 rather than request-derived, and it is the seam the first three acceptance criteria exercise.
+
+**That resolution is not fail-closed on its own, and this story must not be written as if it
+were.** `resolveContactID()` raises `CRM_Core_Exception` in exactly one case: the v3 resolver
+returned the literal `unknown-user` sentinel ([`Civi/Api4/Utils/FormattingUtil.php`:538]), which
+that resolver produces only for an `@user:<username>` expression whose framework user or matched
+contact cannot be found ([`api/v3/utils.php`:2194], [`api/v3/utils.php`:2199]). Two other
+outcomes return `NULL` and raise nothing: a `user_contact_id` token resolved while no contact is
+logged in, because `CRM_Core_Session::getLoggedInContactID()` itself yields `NULL`
+([`api/v3/utils.php`:2186-2187]); and any expression the resolver does not recognise, which falls
+through to a bare `NULL` return ([`api/v3/utils.php`:2204]). A `NULL` is then discarded by the
+caller's null-coalesce, leaving the original unresolved operand in place
+([`Civi/Api4/Utils/FormattingUtil.php`:126]). The consequence is a requirement rather than a
+footnote: the portal establishes an authenticated session and **refuses the request itself** when
+the session yields no contact identifier, rather than relying on resolution to raise — which is
+what the fourth acceptance criterion verifies. This account is bounded to the addresses named
+here, and no claim is made about how other callers of either function treat a `NULL`.
 
 **Why `access Contact Dashboard` is not sufficient, and what the least-privilege candidate is.**
 The dashboard permission's own description reads "View Contact Dashboard (for themselves and

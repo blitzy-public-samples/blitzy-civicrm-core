@@ -247,8 +247,13 @@ address**; nothing was observed at runtime.
 **1. The list reads through APIv4, and the read action already exists.** The contribution entity
 is supplied by an extension and extends the generic DAO entity, overriding only write actions
 ([`ext/civi_contribute/Civi/Api4/Contribution.php`:21]) — so `Contribution.get` is inherited and a
-where-clause read is the supported path. No BAO or DAO call is needed, or permitted, on either
-the list or the receipt path.
+where-clause read is the supported path. Every read this Epic adds — the list, and the scoping
+and ownership checks on the receipt path — goes through APIv4, and no new direct BAO or DAO
+access is introduced. That constrains the new code this Epic writes, not the code it may
+inherit: the renderer behind the existing receipt route instantiates
+`CRM_Contribute_BAO_Contribution` directly ([`CRM/Contribute/Form/Task/Invoice.php`:299]), so
+whether any of it is reused at all is part of the still-open reuse-or-replace decision in
+`CLR-10` rather than something this grounding settles.
 
 **2. The tenant boundary rests on a query predicate, not on an ACL.** On a display that bypasses
 ACLs, a single assignment turns permission checks off for the underlying query
@@ -542,7 +547,7 @@ Architecture, authorization or observable behaviour cannot be settled without th
 
 **CLR-13** — owner STORY-003
 
-`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
+`[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route, and the two staff-side precedents disagree: the staff invoice form validates for Completed, Pending, Refunded and Partially paid, while the Print Contribution Receipts task permits Completed only. Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
 
 ### 7.3 Informational
 
@@ -687,4 +692,3 @@ exception-clause reasoning behind them in §4.3; the nine native column names an
 four additional mapping columns; the Epic row's position as the first data row; the emptiness of
 the Epic row's `Epic Link` cell; and the thirteen `CLR-nn` and two `IMP-nn` questions, which are
 open rather than inferred and must not be closed by guesswork.
-
