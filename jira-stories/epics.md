@@ -464,11 +464,12 @@ nine fields keyed to match the CSV headers. Acceptance Criteria, Dependencies an
 content is this document's job and the mapping file's, not the export's.
 
 The two encodings cannot be byte-identical to each other or to the story documents — a criterion
-is a `[ ]` list item in markdown, a line inside a quoted cell in CSV and an array element in JSON.
-The guarantee is **semantic equality after normalisation**: strip enclosing quotes, un-double
-escaped quotes, split criteria on line feeds, split dependencies on commas, split labels on
-spaces, coerce Story Points to a number. Byte identity is required only where the representation
-genuinely is identical — the Epic name string, story identifiers, titles and label tokens.
+is a line beginning `[ ] ` in markdown, a line inside a quoted cell in CSV and an array element
+in JSON. The guarantee is **semantic equality after normalisation**: strip enclosing quotes,
+un-double escaped quotes, split criteria on line feeds, split dependencies on commas, split
+labels on spaces, coerce Story Points to a number. Byte identity is required only where the
+representation genuinely is identical — the Epic name string, story identifiers, titles and label
+tokens.
 
 ---
 
@@ -554,7 +555,7 @@ shown, not **how it is authorized**.
 
 **CLR-10** — owner STORY-003
 
-`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read. If they are kept, the decision must also state the request-integrity, idempotency, deduplication and retention controls they run under, because an unprotected state-changing GET is not an available answer.]`
+`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
 
 **CLR-13** — owner STORY-003
 

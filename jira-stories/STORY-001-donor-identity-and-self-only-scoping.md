@@ -206,9 +206,15 @@ authorized path.
 
 **No donor-appropriate role is seeded by default.** The Standalone identity extension's
 post-install routine ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:45]) seeds exactly
-three roles — anonymous, administrator and staff
+three roles — `everyone` (anonymous), `admin` (administrator) and `staff`, named here by the value
+each one stores rather than by its display label
 ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:53-100], role identities at
-[`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:58,72,80]) — and grants
+[`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:58,72,80]; the first two are the constants
+`ANONYMOUS_ROLE_NAME = 'everyone'`
+([`ext/standaloneusers/CRM/Standaloneusers/BAO/Role.php`:14]) and
+`SUPERADMIN_ROLE_NAME = 'admin'`
+([`ext/standaloneusers/CRM/Standaloneusers/BAO/Role.php`:12]), and only the third is a literal) —
+and grants
 `access Contact Dashboard` only to `staff`
 ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:86]), which in the same grant also
 carries `view all contacts` ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:90]) and

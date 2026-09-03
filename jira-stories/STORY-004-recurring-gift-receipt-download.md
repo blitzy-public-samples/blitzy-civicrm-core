@@ -95,11 +95,9 @@ STORY-002 and STORY-003 — which is why those three carry High and this one doe
 
 [ ] Given a contribution with no recorded `receipt_date`, when a download is requested, then the behaviour defined for the viewing path applies and no empty or malformed file is returned.
 
-[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule, exactly as the viewing path requires.
+[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule, exactly as the viewing path requires; and given the same receipt is downloaded repeatedly by the donor who owns it, then the number of stored files and activity records created does not grow with the number of requests; and given a download request forged from another site on that donor's session, then it creates no stored file and no activity record — whether because the download GET is side-effect-free or because the persisting transition requires a request-integrity token the forged request cannot supply.
 
 [ ] Given the donor-facing display, when its configuration is reviewed, then `actions` remains false and the download affordance is a row-level link, so no bulk task and no result-set export is reachable by a donor role.
-
-[ ] Given the same receipt is downloaded repeatedly by the donor who owns it, then the number of stored files and activity records created does not grow with the number of requests; and given a download request forged from another site on that donor's session, then it creates no stored file and no activity record — whether because the download GET is side-effect-free or because the persisting transition requires a request-integrity token the forged request cannot supply.
 
 ---
 
@@ -114,10 +112,11 @@ is raised as a clarification rather than asserted.
 
 **Enforcement is the viewing path's, referenced and not restated.** All four of STORY-001's
 predicates — 1 through 4, in the numbering that contract publishes — plus whichever status set
-`CLR-13` fixes are applied by this path too, server-side, on an identifier the caller supplies and
-cannot widen. The definitions live in STORY-001 and STORY-003 and are deliberately not reproduced
-here: a single normative statement is what makes the two receipt paths verifiably the same, and
-restating it would create exactly the second copy whose divergence criterion 2 exists to catch.
+`CLR-13` fixes, plus any `CLR-05` financial-type restriction, are applied by this path too,
+server-side, on an identifier the caller supplies and cannot widen. The definitions live in
+STORY-001 and STORY-003 and are deliberately not reproduced here: a single normative statement is
+what makes the two receipt paths verifiably the same, and restating it would create exactly the
+second copy whose divergence criterion 2 exists to catch.
 
 **Two of those inherited properties are named here, because a file-delivery path is where they go
 missing.** The **identifier is canonicalized before use** — exactly one scalar value, matching
@@ -186,7 +185,7 @@ or token ([`templates/CRM/Contribute/Page/UserDashboard.tpl`:48],
 [`templates/CRM/Contribute/Page/UserDashboard.tpl`:50-51]) on a route declared `page_type` 1
 ([`CRM/Contribute/xml/Menu/Contribute.xml`:304]), where core's route-level key check covers
 `page_type` 3 only ([`CRM/Core/Permission.php`:573-578], the validation at
-[`CRM/Core/Permission.php`:575]). Criteria 4 and 6 assert the invariant and are evaluable under
+[`CRM/Core/Permission.php`:575]). Criterion 4 asserts the invariant and is evaluable under
 either answer. It constrains the mechanics of the write, not the affordance: the row-level link
 stays a link, and criterion 5 continues to hold.
 

@@ -254,9 +254,15 @@ authorized path.
 
 **No donor-appropriate role is seeded by default.** The Standalone identity extension's
 post-install routine ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:45]) seeds exactly
-three roles — anonymous, administrator and staff
+three roles — `everyone` (anonymous), `admin` (administrator) and `staff`, named here by the value
+each one stores rather than by its display label
 ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:53-100], role identities at
-[`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:58,72,80]) — and grants
+[`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:58,72,80]; the first two are the constants
+`ANONYMOUS_ROLE_NAME = 'everyone'`
+([`ext/standaloneusers/CRM/Standaloneusers/BAO/Role.php`:14]) and
+`SUPERADMIN_ROLE_NAME = 'admin'`
+([`ext/standaloneusers/CRM/Standaloneusers/BAO/Role.php`:12]), and only the third is a literal) —
+and grants
 `access Contact Dashboard` only to `staff`
 ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:86]), which in the same grant also
 carries `view all contacts` ([`ext/standaloneusers/CRM/Standaloneusers/Upgrader.php`:90]) and
@@ -670,14 +676,13 @@ route already in the codebase does not**. STORY-001 defines the authorization co
 STORY-002 enforces it on the list; this story is where ownership is enforced on a request that
 names one record, which is the check the existing route omits (see Technical Notes). That is why
 it carries High priority in the roster even though it adds no new data to the portal: it is the
-story that closes the Epic's ""and nothing else's"" boundary on single-record access.","[ ] Given a donor viewing their history list, when they select one of their own eligible recurring-gift contributions, then the receipt content for that contribution is displayed.
+story that closes the Epic's ""and nothing else's"" boundary on single-record access.","[ ] Given a donor viewing their history list, when they select one of their own eligible recurring-gift contributions, then the receipt content for that contribution is displayed, rendered from the record state that authorized the request and not from a later read by identifier alone; and given a contribution that satisfies every predicate when the request is authorized and then stops satisfying one of them before the receipt is produced — its contact reassigned, its recurring link nulled, its test flag set, its receive date moved into the future or its status moved outside the eligible set — when the response is produced, then no receipt content for that contribution is emitted and the request is refused under the non-disclosing contract, so that the state which authorized the request is the state the output is rendered from.
 [ ] Given a contribution identifier belonging to another donor, when it is requested directly with any combination of request parameters — including a request that pairs it with the donor's own contact identifier, which is the pairing the existing core route accepts, and a request that supplies the contribution identifier twice or as an array — then the response is indistinguishable from the response for an identifier that does not exist, disclosing nothing about whether the record exists.
 [ ] Given a contribution identifier that fails any scoping predicate — one-time, test-mode, or future-dated — or an identifier that is not exactly one canonical in-range positive integer, which covers an absent value, an empty value, the same parameter supplied more than once, an array encoding, a non-numeric value, zero, a negative value, a leading-zero form and a digit string beyond the range of the contribution identifier column — when it is requested directly, then it is refused under that same non-disclosing contract, and the malformed forms are refused before any query is issued.
 [ ] Given a contribution outside the eligible-status set configured for donors, when it is requested, then it is refused under the same non-disclosing contract; and given an eligible Refunded or Cancelled contribution, the credit-note variant is rendered rather than a plain receipt.
 [ ] Given a receipt is displayed, then no column of the contribution record is written, verified by comparing the record before and after the request, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule — so a receipt GET, including one issued from another site on the donor's session, creates nothing, and repeated requests for the same receipt do not accumulate stored files or activity records.
 [ ] Given a contribution with no recorded `receipt_date`, when the donor opens it, then a defined state is shown rather than an error or a blank document, `receipt_date` is not written, and nothing is presented as the receipt originally issued unless it is verifiably that artifact.
-[ ] Given a receipt is displayed, then its content is consistent with the contribution's recorded amount and receive date.
-[ ] Given a contribution that satisfies every predicate when the request is authorized and then stops satisfying one of them before the receipt is produced — its contact reassigned, its recurring link nulled, its test flag set, its receive date moved into the future or its status moved outside the eligible set — when the response is produced, then no receipt content for that contribution is emitted and the request is refused under the non-disclosing contract, so that the state which authorized the request is the state the output is rendered from.","**Source basis.** Every claim below about the existing system is a **static reading of source at
+[ ] Given a receipt is displayed, then its content is consistent with the contribution's recorded amount and receive date.","**Source basis.** Every claim below about the existing system is a **static reading of source at
 the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
 observed behaviour, and in particular not of behaviour reproduced against a running instance.
 Revalidate the cited locators against another version or target deployment before this story is
@@ -886,7 +891,7 @@ bytes are produced, and nothing on the render path re-tests any of it. The recei
 therefore either **carry the authorized row's values into rendering**, so that no second read by
 identifier occurs, or **re-apply predicates 1 to 4, the `CLR-13` status set and any `CLR-05`
 financial-type restriction in the same read that produces the output**, refusing under the
-non-disclosing contract if any of them no longer holds. Criterion 8 is the test for it: it passes
+non-disclosing contract if any of them no longer holds. Criterion 1 is the test for it: it passes
 under either implementation and fails a path that checks once and renders from a later read. The
 same requirement reaches the reuse decision — reusing that renderer means supplying it with
 already-authorized data or wrapping its final read, not placing a check in front of it and leaving
@@ -1001,7 +1006,7 @@ including both `id` and `cid`, is already asserted by
 covered by [`tests/phpunit/CRM/Contribute/Form/Task/InvoiceTest.php`:22-224]. The non-disclosure
 cases in criteria 2 to 4 are new coverage with no existing home and need a test that varies the
 identifier — including its malformed encodings — while holding the session fixed, asserting one
-identical response across the whole set. Criterion 8 needs a second new shape: mutate the record
+identical response across the whole set. Criterion 1 needs a second new shape: mutate the record
 between the authorizing read and the render, which is expressible without concurrency by updating
 the row inside the request through a hook or a test double on the render step and asserting the
 refusal. Criterion 5 needs a third: repeat one request and assert that the counts of stored files
@@ -1049,7 +1054,7 @@ closing summary uses, so that neither document can drift from the other:
 
 `[NEEDS CLARIFICATION: CLR-09 — Is a donor shown a reproduction of the receipt originally issued, or one regenerated from current data and current message templates? The Contribution record stores no receipt document, but historical PDFs may exist as File records attached to Activities; whether those can be reliably identified as the artifact originally issued needs investigation before this is settled.]`
 
-`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read. If they are kept, the decision must also state the request-integrity, idempotency, deduplication and retention controls they run under, because an unprotected state-changing GET is not an available answer.]`
+`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
 
 `[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`","STORY-001, STORY-002","8","donor-portal receipts security civicontribute","Story","High","Receipt & Contribution History Self-Service",""
 "STORY-004","Recurring-gift receipt download","Deliver the same receipt content as a downloadable file a donor can keep, under **identical**
@@ -1098,9 +1103,8 @@ STORY-002 and STORY-003 — which is why those three carry High and this one doe
 ([`epics.md`](epics.md) §4.3).","[ ] Given a donor viewing a receipt they own, when they request a download, then a file is returned whose content corresponds to the receipt displayed and is rendered from the record state that authorized the request — the authorized row carried into rendering, or a final read that re-applies every predicate immediately before the file is produced — and not from a later read by identifier alone.
 [ ] Given an identifier the donor does not own, or one failing any scoping or eligibility predicate, or one that is not exactly one canonical in-range positive integer, when a download is requested for it, then the same non-disclosing refusal contract that STORY-003 defines applies, verified against the identical case list — an identifier that does not exist, one the donor does not own, one whose recurring link is null, one flagged as test-mode, one dated in the future, one outside the eligible-status set, and the malformed forms of the identifier itself: absent, empty, supplied more than once, array-encoded, non-numeric, zero, negative, leading-zero, or beyond the range of the contribution identifier column — with every one of them producing one identical response, and the malformed forms refused before any query is issued.
 [ ] Given a contribution with no recorded `receipt_date`, when a download is requested, then the behaviour defined for the viewing path applies and no empty or malformed file is returned.
-[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule, exactly as the viewing path requires.
-[ ] Given the donor-facing display, when its configuration is reviewed, then `actions` remains false and the download affordance is a row-level link, so no bulk task and no result-set export is reachable by a donor role.
-[ ] Given the same receipt is downloaded repeatedly by the donor who owns it, then the number of stored files and activity records created does not grow with the number of requests; and given a download request forged from another site on that donor's session, then it creates no stored file and no activity record — whether because the download GET is side-effect-free or because the persisting transition requires a request-integrity token the forged request cannot supply.","**Source basis.** Every claim below about the existing system is a **static reading of source at
+[ ] Given a download completes, then no column of the contribution record is written, and no new logging or audit capability is introduced; and where the route chosen under `CLR-10` writes a stored file or an activity record, that write is reached only through a request-integrity-checked, non-GET, deduplicated transition under a stated retention rule, exactly as the viewing path requires; and given the same receipt is downloaded repeatedly by the donor who owns it, then the number of stored files and activity records created does not grow with the number of requests; and given a download request forged from another site on that donor's session, then it creates no stored file and no activity record — whether because the download GET is side-effect-free or because the persisting transition requires a request-integrity token the forged request cannot supply.
+[ ] Given the donor-facing display, when its configuration is reviewed, then `actions` remains false and the download affordance is a row-level link, so no bulk task and no result-set export is reachable by a donor role.","**Source basis.** Every claim below about the existing system is a **static reading of source at
 the stated address**, against CiviCRM `6.17.alpha1` ([`xml/version.xml`:3]) — not a description of
 observed behaviour, and no receipt was rendered to confirm any of it. Revalidate the cited
 locators against another version or target deployment before this story is estimated as it
@@ -1109,10 +1113,11 @@ is raised as a clarification rather than asserted.
 
 **Enforcement is the viewing path's, referenced and not restated.** All four of STORY-001's
 predicates — 1 through 4, in the numbering that contract publishes — plus whichever status set
-`CLR-13` fixes are applied by this path too, server-side, on an identifier the caller supplies and
-cannot widen. The definitions live in STORY-001 and STORY-003 and are deliberately not reproduced
-here: a single normative statement is what makes the two receipt paths verifiably the same, and
-restating it would create exactly the second copy whose divergence criterion 2 exists to catch.
+`CLR-13` fixes, plus any `CLR-05` financial-type restriction, are applied by this path too,
+server-side, on an identifier the caller supplies and cannot widen. The definitions live in
+STORY-001 and STORY-003 and are deliberately not reproduced here: a single normative statement is
+what makes the two receipt paths verifiably the same, and restating it would create exactly the
+second copy whose divergence criterion 2 exists to catch.
 
 **Two of those inherited properties are named here, because a file-delivery path is where they go
 missing.** The **identifier is canonicalized before use** — exactly one scalar value, matching
@@ -1181,7 +1186,7 @@ or token ([`templates/CRM/Contribute/Page/UserDashboard.tpl`:48],
 [`templates/CRM/Contribute/Page/UserDashboard.tpl`:50-51]) on a route declared `page_type` 1
 ([`CRM/Contribute/xml/Menu/Contribute.xml`:304]), where core's route-level key check covers
 `page_type` 3 only ([`CRM/Core/Permission.php`:573-578], the validation at
-[`CRM/Core/Permission.php`:575]). Criteria 4 and 6 assert the invariant and are evaluable under
+[`CRM/Core/Permission.php`:575]). Criterion 4 asserts the invariant and is evaluable under
 either answer. It constrains the mechanics of the write, not the affordance: the row-level link
 stays a link, and criterion 5 continues to hold.
 

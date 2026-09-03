@@ -100,7 +100,7 @@ story that closes the Epic's "and nothing else's" boundary on single-record acce
 
 ## Acceptance Criteria
 
-[ ] Given a donor viewing their history list, when they select one of their own eligible recurring-gift contributions, then the receipt content for that contribution is displayed.
+[ ] Given a donor viewing their history list, when they select one of their own eligible recurring-gift contributions, then the receipt content for that contribution is displayed, rendered from the record state that authorized the request and not from a later read by identifier alone; and given a contribution that satisfies every predicate when the request is authorized and then stops satisfying one of them before the receipt is produced — its contact reassigned, its recurring link nulled, its test flag set, its receive date moved into the future or its status moved outside the eligible set — when the response is produced, then no receipt content for that contribution is emitted and the request is refused under the non-disclosing contract, so that the state which authorized the request is the state the output is rendered from.
 
 [ ] Given a contribution identifier belonging to another donor, when it is requested directly with any combination of request parameters — including a request that pairs it with the donor's own contact identifier, which is the pairing the existing core route accepts, and a request that supplies the contribution identifier twice or as an array — then the response is indistinguishable from the response for an identifier that does not exist, disclosing nothing about whether the record exists.
 
@@ -113,8 +113,6 @@ story that closes the Epic's "and nothing else's" boundary on single-record acce
 [ ] Given a contribution with no recorded `receipt_date`, when the donor opens it, then a defined state is shown rather than an error or a blank document, `receipt_date` is not written, and nothing is presented as the receipt originally issued unless it is verifiably that artifact.
 
 [ ] Given a receipt is displayed, then its content is consistent with the contribution's recorded amount and receive date.
-
-[ ] Given a contribution that satisfies every predicate when the request is authorized and then stops satisfying one of them before the receipt is produced — its contact reassigned, its recurring link nulled, its test flag set, its receive date moved into the future or its status moved outside the eligible set — when the response is produced, then no receipt content for that contribution is emitted and the request is refused under the non-disclosing contract, so that the state which authorized the request is the state the output is rendered from.
 
 ---
 
@@ -329,7 +327,7 @@ bytes are produced, and nothing on the render path re-tests any of it. The recei
 therefore either **carry the authorized row's values into rendering**, so that no second read by
 identifier occurs, or **re-apply predicates 1 to 4, the `CLR-13` status set and any `CLR-05`
 financial-type restriction in the same read that produces the output**, refusing under the
-non-disclosing contract if any of them no longer holds. Criterion 8 is the test for it: it passes
+non-disclosing contract if any of them no longer holds. Criterion 1 is the test for it: it passes
 under either implementation and fails a path that checks once and renders from a later read. The
 same requirement reaches the reuse decision — reusing that renderer means supplying it with
 already-authorized data or wrapping its final read, not placing a check in front of it and leaving
@@ -444,7 +442,7 @@ including both `id` and `cid`, is already asserted by
 covered by [`tests/phpunit/CRM/Contribute/Form/Task/InvoiceTest.php`:22-224]. The non-disclosure
 cases in criteria 2 to 4 are new coverage with no existing home and need a test that varies the
 identifier — including its malformed encodings — while holding the session fixed, asserting one
-identical response across the whole set. Criterion 8 needs a second new shape: mutate the record
+identical response across the whole set. Criterion 1 needs a second new shape: mutate the record
 between the authorizing read and the render, which is expressible without concurrency by updating
 the row inside the request through a hook or a test double on the render step and asserting the
 refusal. Criterion 5 needs a third: repeat one request and assert that the counts of stored files
@@ -492,7 +490,7 @@ closing summary uses, so that neither document can drift from the other:
 
 `[NEEDS CLARIFICATION: CLR-09 — Is a donor shown a reproduction of the receipt originally issued, or one regenerated from current data and current message templates? The Contribution record stores no receipt document, but historical PDFs may exist as File records attached to Activities; whether those can be reliably identified as the artifact originally issued needs investigation before this is settled.]`
 
-`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read. If they are kept, the decision must also state the request-integrity, idempotency, deduplication and retention controls they run under, because an unprotected state-changing GET is not an available answer.]`
+`[NEEDS CLARIFICATION: CLR-10 — Should the existing civicrm/contribute/invoice route be hardened to verify contribution ownership and then reused, or left as it is with an independent receipt path specified? Hardening changes a route staff also reach; reusing it unmodified cannot satisfy the Epic's boundary. Either way, decide explicitly whether the stored file and Activity that route writes are acceptable for a donor read.]`
 
 `[NEEDS CLARIFICATION: CLR-13 — Which contribution statuses may a donor obtain a receipt for? Core enforces no status rule on the donor route; the staff invoice form's set of Completed, Pending, Refunded and Partially paid is the only in-core precedent, and Refunded and Cancelled render as credit notes. The chosen set must be enforced identically by the viewing and download paths.]`
 
